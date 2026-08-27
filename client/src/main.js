@@ -2,6 +2,14 @@ import { api } from './api.js';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
+window.handleDownloadDoc = async (docId, entityId) => {
+  try {
+    await api.downloadDocument(docId, entityId);
+  } catch (err) {
+    alert('Error downloading document: ' + err.message);
+  }
+};
+
 // Current User Persona State (For Faculty Review & Demo)
 let currentRole = localStorage.getItem('ldce_user_role') || 'Principal';
 
@@ -30,7 +38,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'view',      // View scrutiny
     committee: 'approve',   // Approve DLPC/DPC
     delivery:  'view',      // View inspection
-    repairs:   'view',      // View repairs
+    repairs:   'view',
+    templates: 'view',      // View repairs
   },
   StoreOfficer: {
     dashboard: 'view',      // Full View
@@ -42,7 +51,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'create',    // Review scrutiny
     committee: 'create',    // Secretary role
     delivery:  'manage',    // Process stock & vouchers
-    repairs:   'manage',    // Full repair management
+    repairs:   'manage',
+    templates: 'view',    // Full repair management
   },
   HOD: {
     dashboard: 'view',      // Dept View
@@ -54,7 +64,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'approve',   // Sign scrutiny
     committee: 'view',      // Member (view)
     delivery:  'approve',   // Sign receipt
-    repairs:   'hidden',    // No access
+    repairs:   'hidden',
+    templates: 'view',    // No access
   },
   DeptRep: {
     dashboard: 'view',      // Dept View
@@ -66,7 +77,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'view',      // Assist (view)
     committee: 'hidden',    // No access
     delivery:  'create',    // Receive goods
-    repairs:   'hidden',    // No access
+    repairs:   'hidden',
+    templates: 'view',    // No access
   },
   ExpertMember: {
     dashboard: 'hidden',    // No dashboard
@@ -78,7 +90,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'create',    // Evaluate bids
     committee: 'view',      // Technical sign (view)
     delivery:  'create',    // Inspect goods
-    repairs:   'hidden',    // No access
+    repairs:   'hidden',
+    templates: 'view',    // No access
   },
   AccountsOfficer: {
     dashboard: 'view',      // Finance View
@@ -90,7 +103,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'hidden',    // No access
     committee: 'view',      // Financial review
     delivery:  'manage',    // Process payment
-    repairs:   'hidden',    // No access
+    repairs:   'hidden',
+    templates: 'view',    // No access
   },
   DLPCMember: {
     dashboard: 'view',      // View only
@@ -102,7 +116,8 @@ const ROLE_PERMISSIONS = {
     scrutiny:  'view',      // Review scrutiny
     committee: 'approve',   // Sign MOM
     delivery:  'hidden',    // No access
-    repairs:   'hidden',    // No access
+    repairs:   'hidden',
+    templates: 'view',    // No access
   }
 };
 
@@ -201,6 +216,10 @@ const NAV_ITEMS = [
     { route: 'delivery', label: 'Inspection & Vouchers', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>' },
     { route: 'repairs', label: 'Equipment Repairs', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>' },
   ]},
+
+  { section: 'Templates Library', items: [
+    { route: 'templates', label: 'Document Templates', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
+  ]},
 ];
 
 function renderSidebarNav(activeRoute) {
@@ -276,7 +295,8 @@ function getRouteTitle(route) {
     scrutiny: 'Technical Scrutiny Matrix',
     committee: 'DLPC / DPC Sanctions',
     delivery: 'Inspection & Payment Vouchers',
-    repairs: 'Equipment Repair Requests'
+    repairs: 'Equipment Repair Requests',
+    templates: 'Document Templates Library'
   };
   return titles[route] || 'Store & Purchase Management System';
 }
@@ -334,6 +354,8 @@ async function router() {
       const vouchers = await api.getVouchers();
       appEl.innerHTML = renderAppShell(renderDeliveryView(orders.data, vouchers.data), 'delivery');
       bindDeliveryEvents();
+    } else if (route === 'templates') {
+      appEl.innerHTML = renderAppShell(renderTemplatesView(), 'templates');
     } else if (route === 'repairs') {
       const depts = await api.getDepartments();
       const requests = await api.getRepairs();
@@ -752,6 +774,7 @@ function renderIndentsView(depts, indents) {
               <th>Total Cost (₹)</th>
               <th>Fund Type</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -764,6 +787,9 @@ function renderIndentsView(depts, indents) {
                 <td>₹${parseFloat(i.total_cost).toLocaleString('en-IN')}</td>
                 <td><span class="badge badge-info">${i.fund_type}</span></td>
                 <td><span class="badge badge-warning">${i.status}</span></td>
+                <td>
+                  <button class="btn btn-primary btn-sm" onclick="handleDownloadDoc('DOC-12', '${i.id || i.indent_no.split('/').pop()}')">Gen DOC-12</button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -924,7 +950,7 @@ function bindNotesEvents() {
 
   document.getElementById('downloadDocxBtn')?.addEventListener('click', () => {
     const indentId = document.getElementById('noteIndentId').value;
-    window.location.href = api.getDocxNoteUrl(indentId);
+    handleDownloadDoc('DOC-17', indentId);
   });
 }
 
@@ -1267,3 +1293,46 @@ function bindRepairsEvents() {
 // App Initialization
 window.addEventListener('hashchange', router);
 window.addEventListener('DOMContentLoaded', router);
+
+function renderTemplatesView() {
+  const templates = [
+    { path: '2.Intitiating process/Check list- A while initiate process.docx', name: 'Check list A' },
+    { path: '2.Intitiating process/Format-Specifications Sheet.docx', name: 'Specifications Sheet' },
+    { path: '2.Intitiating process/Format-Terms and conditions.docx', name: 'Terms and Conditions' },
+    { path: '2.Intitiating process/General guidelines & Common ATC for bid.docx', name: 'General Guidelines & ATC' },
+    { path: '2.Intitiating process/Indent for Purchase format_Govt. Fund.docx', name: 'Purchase Indent (Govt. Fund)' },
+    { path: '2.Intitiating process/Indent for Purchase format_Non Govt. fund.docx', name: 'Purchase Indent (Non Govt. Fund)' },
+    { path: '2.Intitiating process/Note for Purchase-New Item-2026-27.docx', name: 'Note for Purchase (New Item)' },
+    { path: '2.Intitiating process/Note for Purchase-Other items.docx', name: 'Note for Purchase (Other Items)' },
+  ];
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Available Document Templates (Phase 2)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Template Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${templates.map(t => `
+              <tr>
+                <td><strong>${t.name}</strong><br><small>${t.path}</small></td>
+                <td>
+                  <button class="btn btn-primary btn-sm" onclick="window.downloadTemplate('${t.path}')">
+                    Fill & Download
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}

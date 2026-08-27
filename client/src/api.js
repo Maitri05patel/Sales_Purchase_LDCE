@@ -21,8 +21,55 @@ export async function fetchApi(endpoint, options = {}) {
   }
   return data;
 }
+export async function downloadDocument(docId, entityId) {
+  const url = `${API_BASE}/documents/${docId}?entityId=${entityId}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    let errorMessage = 'Failed to generate document';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch(e) {}
+    throw new Error(errorMessage);
+  }
+  
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = `${docId}-${entityId}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function downloadTemplate(templatePath) {
+  const url = `${API_BASE}/documents/template?path=${encodeURIComponent(templatePath)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    let errorMessage = 'Failed to generate template';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch(e) {}
+    throw new Error(errorMessage);
+  }
+  
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = templatePath.split('/').pop() || 'GeneratedDocument.docx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
 
 export const api = {
+  downloadDocument,
+  downloadTemplate,
   // Masters
   getDepartments: () => fetchApi('/masters/departments'),
   getUsers: () => fetchApi('/masters/users'),
