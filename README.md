@@ -29,10 +29,6 @@ The system works in synergy with the Government e-Marketplace (GeM) Portal and m
 
 ## Getting Started
 
-### Prerequisites
-- Node.js (v18+)
-- PostgreSQL Database
-
 ### Setup Backend
 1. Navigate to the server directory:
    ```bash
