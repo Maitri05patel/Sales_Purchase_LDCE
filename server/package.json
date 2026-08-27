@@ -1,0 +1,19 @@
+{
+  "name": "ldce-purchase-sales-server",
+  "version": "1.0.0",
+  "description": "Backend REST API for LDCE Store & Purchase Management System",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "db:init": "node db/initDb.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "docx": "^9.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}
