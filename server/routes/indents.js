@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 const { generateGujaratiNoteSheetDocx } = require('../services/docxGenerator');
 
 // Get all indents
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create new Purchase Indent (FORM-03) with ACID Transaction
-router.post('/', async (req, res) => {
+router.post('/', authorize('HOD', 'DeptRep', 'StoreOfficer'), async (req, res) => {
   const {
     fund_type, budget_head, dept_id, indenter_user_id,
     item_name, item_description, quantity, unit_cost, gem_details
@@ -82,7 +83,7 @@ router.get('/:id/full', async (req, res) => {
 });
 
 // Create/Update Specifications (FORM-04)
-router.post('/:id/specs', async (req, res) => {
+router.post('/:id/specs', authorize('ExpertMember', 'StoreOfficer', 'HOD'), async (req, res) => {
   const indentId = req.params.id;
   const { detailed_specs, spec_notes, expert_signatures, consignees } = req.body;
 
@@ -129,7 +130,7 @@ router.post('/:id/specs', async (req, res) => {
 });
 
 // Create/Update ATC Terms (FORM-05)
-router.post('/:id/atc', async (req, res) => {
+router.post('/:id/atc', authorize('ExpertMember', 'StoreOfficer', 'HOD'), async (req, res) => {
   const indentId = req.params.id;
   const {
     delivery_location, installation_scope, service_interval,
@@ -166,7 +167,7 @@ router.post('/:id/atc', async (req, res) => {
 });
 
 // Create/Update Gujarati Note Sheet (FORM-06)
-router.post('/:id/note-sheet', async (req, res) => {
+router.post('/:id/note-sheet', authorize('StoreOfficer', 'HOD', 'DeptRep'), async (req, res) => {
   const indentId = req.params.id;
   const {
     dept_id, scheme_year, item_name_guj, qty_str, total_amount,
@@ -199,7 +200,7 @@ router.post('/:id/note-sheet', async (req, res) => {
 });
 
 // Export Editable Gujarati Note Sheet as Microsoft Word (.docx) Document!
-router.get('/:id/docx-note', async (req, res) => {
+router.get('/:id/docx-note', authorize('StoreOfficer', 'Principal', 'HOD'), async (req, res) => {
   const indentId = req.params.id;
   try {
     const noteRes = await db.query(

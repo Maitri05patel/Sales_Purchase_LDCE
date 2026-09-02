@@ -10,8 +10,9 @@ window.handleDownloadDoc = async (docId, entityId) => {
   }
 };
 
-// Current User Persona State (For Faculty Review & Demo)
-let currentRole = localStorage.getItem('ldce_user_role') || 'Principal';
+// Current authenticated user state (from JWT login)
+let currentUser = api.getStoredUser();
+let currentRole = currentUser?.role || 'Principal';
 
 const ROLES = [
   'Principal',
@@ -23,101 +24,128 @@ const ROLES = [
   'DLPCMember'
 ];
 
+// Demo credentials shown on login page with rich role metadata
+const DEMO_CREDENTIALS = [
+  { role: 'Principal / Director', name: 'Dr. C. H. Vithalani', email: 'principal@ldce.ac.in', dept: 'Head of Institution', badge: 'Executive Authority', color: '#1e40af' },
+  { role: 'Store Officer', name: 'Prof. M. B. Patel', email: 'store@ldce.ac.in', dept: 'Central Store Section', badge: 'Procurement Incharge', color: '#b45309' },
+  { role: 'Head of Department', name: 'Dr. D. A. Parikh', email: 'hod@ldce.ac.in', dept: 'Computer Eng. Dept', badge: 'Demand & Approval', color: '#047857' },
+  { role: 'Dept. Representative', name: 'Prof. T. J. Raval', email: 'deptrep@ldce.ac.in', dept: 'Applied Mechanics Dept', badge: 'Indent & Verification', color: '#c2410c' },
+  { role: 'Expert Committee', name: 'Prof. N. K. Patel', email: 'expert@ldce.ac.in', dept: 'Electrical / IT Committee', badge: 'Technical Scrutiny', color: '#b91c1c' },
+  { role: 'Accounts Officer', name: 'Shri K. R. Vyas', email: 'accounts@ldce.ac.in', dept: 'Accounts & Finance Branch', badge: 'Financial Sanction', color: '#0f766e' },
+  { role: 'DLPC / DPC Member', name: 'Prof. S. M. Desai', email: 'dlpc@ldce.ac.in', dept: 'Central Purchase Body', badge: 'Committee Member', color: '#6d28d9' },
+];
+
+// Primary default landing route tailored to each role
+const ROLE_HOME_ROUTES = {
+  Principal: 'dashboard',
+  StoreOfficer: 'dashboard',
+  HOD: 'indents',
+  DeptRep: 'indents',
+  ExpertMember: 'scrutiny',
+  AccountsOfficer: 'financial',
+  DLPCMember: 'committee'
+};
+
+function getRoleHomeRoute(role) {
+  return ROLE_HOME_ROUTES[role] || 'indents';
+}
+
 // ============================================================
 // ROLE-BASED ACCESS CONTROL (RBAC) ENGINE
-// Access levels: hidden | view | create | approve | manage
+// Only strictly relevant sections are visible for each role.
+// Irrelevant sections are completely removed ('hidden') from navigation.
 // ============================================================
 const ROLE_PERMISSIONS = {
   Principal: {
-    dashboard: 'view',      // Full View
-    masters:   'view',      // View only
-    cte:       'approve',   // Approve demands
-    indents:   'approve',   // Approve indents
-    notes:     'approve',   // Approve note sheets
-    financial: 'view',      // View ledger
-    scrutiny:  'view',      // View scrutiny
-    committee: 'approve',   // Approve DLPC/DPC
-    delivery:  'view',      // View inspection
-    repairs:   'view',
-    templates: 'view',      // View repairs
+    dashboard: 'view',      // Full Institutional Overview
+    masters:   'view',      // View departments & committees
+    cte:       'approve',   // Approve annual CTE demands
+    indents:   'approve',   // Approve purchase indents
+    notes:     'approve',   // Final administrative sanction on note sheets
+    financial: 'view',      // Oversight of EMD / e-PBG ledger
+    scrutiny:  'view',      // Review technical scrutiny matrix
+    committee: 'approve',   // Grant DLPC/DPC final sanctions
+    delivery:  'view',      // Inspection & payment vouchers
+    repairs:   'view',      // Equipment repairs approval
+    templates: 'view',      // Official document templates
   },
   StoreOfficer: {
-    dashboard: 'view',      // Full View
-    masters:   'manage',    // Full CRUD
-    cte:       'view',      // Aggregate / view
-    indents:   'create',    // Review & process
-    notes:     'create',    // Process note sheets
-    financial: 'manage',    // Full EMD/e-PBG management
-    scrutiny:  'create',    // Review scrutiny
-    committee: 'create',    // Secretary role
-    delivery:  'manage',    // Process stock & vouchers
-    repairs:   'manage',
-    templates: 'view',    // Full repair management
+    dashboard: 'view',      // Full Store & Purchase Dashboard
+    masters:   'manage',    // Full CRUD on depts & governance
+    cte:       'view',      // Aggregate demands into CTE proposal
+    indents:   'create',    // Review & process indents
+    notes:     'create',    // Prepare & process Gujarati note sheets
+    financial: 'manage',    // Full EMD & e-PBG management
+    scrutiny:  'create',    // Compile bids & committee agenda
+    committee: 'create',    // Secretary role (DLPC & DPC)
+    delivery:  'manage',    // Stock entry & pass for payment vouchers
+    repairs:   'manage',    // Work orders & repair bills
+    templates: 'view',      // Full template library
   },
   HOD: {
-    dashboard: 'view',      // Dept View
-    masters:   'create',    // Manage reps
-    cte:       'create',    // Submit demands
-    indents:   'create',    // Create/Approve
-    notes:     'approve',   // Sign note sheets
-    financial: 'hidden',    // No access
-    scrutiny:  'approve',   // Sign scrutiny
-    committee: 'view',      // Member (view)
-    delivery:  'approve',   // Sign receipt
-    repairs:   'hidden',
-    templates: 'view',    // No access
+    dashboard: 'hidden',    // Removed - irrelevant to HOD
+    masters:   'hidden',    // Removed - managed by Store
+    cte:       'create',    // Submit department annual item demands
+    indents:   'create',    // Initiate & sign department indents
+    notes:     'approve',   // Review & sign administrative note sheets
+    financial: 'hidden',    // Removed - handled by Store & Accounts
+    scrutiny:  'approve',   // Review & endorse technical scrutiny matrix
+    committee: 'hidden',    // Removed - managed centrally
+    delivery:  'approve',   // Sign department material receipt notes
+    repairs:   'create',    // Submit equipment repair requests
+    templates: 'hidden',    // Removed
   },
   DeptRep: {
-    dashboard: 'view',      // Dept View
-    masters:   'view',      // View only
-    cte:       'create',    // Prepare demands
-    indents:   'create',    // Draft indents
-    notes:     'create',    // Draft note sheets
-    financial: 'hidden',    // No access
-    scrutiny:  'view',      // Assist (view)
-    committee: 'hidden',    // No access
-    delivery:  'create',    // Receive goods
-    repairs:   'hidden',
-    templates: 'view',    // No access
+    dashboard: 'hidden',    // Removed - irrelevant to DeptRep
+    masters:   'hidden',    // Removed
+    cte:       'create',    // Prepare departmental item demands
+    indents:   'create',    // Draft purchase indents & checklist A/C
+    notes:     'create',    // Draft Gujarati note sheets
+    financial: 'hidden',    // Removed
+    scrutiny:  'hidden',    // Removed - handled by Expert Committee
+    committee: 'hidden',    // Removed
+    delivery:  'create',    // Receive incoming goods & material notes
+    repairs:   'hidden',    // Removed
+    templates: 'hidden',    // Removed
   },
   ExpertMember: {
-    dashboard: 'hidden',    // No dashboard
-    masters:   'view',      // View only
-    cte:       'view',      // Technical input (view)
-    indents:   'create',    // Technical specs
-    notes:     'hidden',    // No access
-    financial: 'hidden',    // No access
-    scrutiny:  'create',    // Evaluate bids
-    committee: 'view',      // Technical sign (view)
-    delivery:  'create',    // Inspect goods
-    repairs:   'hidden',
-    templates: 'view',    // No access
+    dashboard: 'hidden',    // Removed - irrelevant to Expert Committee
+    masters:   'hidden',    // Removed
+    cte:       'hidden',    // Removed
+    indents:   'create',    // Technical Specs (FORM-04) & ATC Terms (FORM-05)
+    notes:     'hidden',    // Removed - handled by Store & HOD
+    financial: 'hidden',    // Removed
+    scrutiny:  'create',    // Technical Scrutiny Matrix (FORM-08) & Disqualifications
+    committee: 'hidden',    // Removed
+    delivery:  'create',    // Physical Technical Inspection & Reports (FORM-10)
+    repairs:   'hidden',    // Removed
+    templates: 'hidden',    // Removed
   },
   AccountsOfficer: {
-    dashboard: 'view',      // Finance View
-    masters:   'view',      // View only
-    cte:       'hidden',    // No access
-    indents:   'hidden',    // No access
-    notes:     'view',      // Budget check (view)
-    financial: 'view',      // View ledger
-    scrutiny:  'hidden',    // No access
-    committee: 'view',      // Financial review
-    delivery:  'manage',    // Process payment
-    repairs:   'hidden',
-    templates: 'view',    // No access
+    dashboard: 'hidden',    // Removed - irrelevant to Accounts
+    masters:   'hidden',    // Removed
+    cte:       'hidden',    // Removed
+    indents:   'hidden',    // Removed
+    notes:     'hidden',    // Removed
+    financial: 'manage',    // Financial Ledger (EMD Demand Drafts & e-PBG Deposits)
+    scrutiny:  'hidden',    // Removed
+    committee: 'view',      // Financial review of DLPC/DPC rate reasonability
+    delivery:  'manage',    // Verify Checklist D & E and release payment
+    repairs:   'hidden',    // Removed
+    templates: 'hidden',    // Removed
   },
   DLPCMember: {
-    dashboard: 'view',      // View only
-    masters:   'hidden',    // No access
-    cte:       'hidden',    // No access
-    indents:   'hidden',    // No access
-    notes:     'hidden',    // No access
-    financial: 'hidden',    // No access
-    scrutiny:  'view',      // Review scrutiny
-    committee: 'approve',   // Sign MOM
-    delivery:  'hidden',    // No access
-    repairs:   'hidden',
-    templates: 'view',    // No access
+    dashboard: 'hidden',    // Removed - irrelevant to DLPC Member
+    masters:   'hidden',    // Removed
+    cte:       'hidden',    // Removed
+    indents:   'hidden',    // Removed
+    notes:     'hidden',    // Removed
+    financial: 'hidden',    // Removed
+    scrutiny:  'view',      // Review technical scrutiny before sanctioning
+    committee: 'approve',   // Review DLPC / DPC Agendas, Rate Reasonability & sign MOM
+    delivery:  'hidden',    // Removed
+    repairs:   'hidden',    // Removed
+    templates: 'hidden',    // Removed
   }
 };
 
@@ -162,38 +190,26 @@ function renderAccessBanner(route) {
   if (level === 'view') {
     return `<div class="access-banner access-banner-view">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span>Viewing as <strong>${roleLabel}</strong> — ${label}. You can view data but cannot modify records.</span>
+      <span>Viewing as <strong>${roleLabel}</strong> &mdash; ${label}. You can view data but cannot modify records.</span>
     </div>`;
   }
   if (level === 'approve') {
     return `<div class="access-banner access-banner-approve">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-      <span>Signed in as <strong>${roleLabel}</strong> — ${label}. You can review records and approve or sign.</span>
+      <span>Signed in as <strong>${roleLabel}</strong> &mdash; ${label}. You can review records and approve or sign.</span>
     </div>`;
   }
   if (level === 'manage') {
     return `<div class="access-banner access-banner-manage">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span>Signed in as <strong>${roleLabel}</strong> — ${label}. You have full create, edit and delete privileges.</span>
+      <span>Signed in as <strong>${roleLabel}</strong> &mdash; ${label}. You have full operational control over this module.</span>
     </div>`;
   }
   // 'create'
   return `<div class="access-banner access-banner-create">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-    <span>Signed in as <strong>${roleLabel}</strong> — ${label}. You can create and submit new records.</span>
+    <span>Signed in as <strong>${roleLabel}</strong> &mdash; ${label}. You can draft and submit new records for approval.</span>
   </div>`;
-}
-
-function renderAccessDenied() {
-  return `
-    <div class="access-denied-card">
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--red-500)"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      <h3>Access Restricted</h3>
-      <p>Your current role (<strong>${formatRoleName(currentRole)}</strong>) does not have access to this module.</p>
-      <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:0.5rem;">Please switch to an authorized role or contact the system administrator.</p>
-      <a href="#/dashboard" class="btn btn-primary" style="margin-top:1rem;">Return to Dashboard</a>
-    </div>
-  `;
 }
 
 // Nav Items Data (route, label, icon SVG, section)
@@ -222,31 +238,45 @@ const NAV_ITEMS = [
   ]},
 ];
 
+function getDeliveryLabel(role) {
+  if (role === 'ExpertMember') return 'Technical Inspection';
+  if (role === 'DeptRep' || role === 'HOD') return 'Material Receipt & Inspection';
+  if (role === 'AccountsOfficer') return 'Payment Vouchers';
+  return 'Inspection & Vouchers';
+}
+
 function renderSidebarNav(activeRoute) {
   return NAV_ITEMS.map(section => {
     const visibleItems = section.items.filter(item => canAccess(item.route));
     if (visibleItems.length === 0) return '';
     return `
       <div class="nav-section-label">${section.section}</div>
-      ${visibleItems.map(item => `
-        <a href="#/${item.route}" class="nav-item ${activeRoute === item.route ? 'active' : ''}">
-          ${item.icon}
-          <span>${item.label}</span>
-        </a>
-      `).join('')}
+      ${visibleItems.map(item => {
+        const label = (item.route === 'delivery') ? getDeliveryLabel(currentRole) : item.label;
+        return `
+          <a href="#/${item.route}" class="nav-item ${activeRoute === item.route ? 'active' : ''}">
+            ${item.icon}
+            <span>${label}</span>
+          </a>
+        `;
+      }).join('')}
     `;
   }).join('');
 }
 
 function renderAppShell(contentHtml, activeRoute = 'dashboard') {
+  const user = currentUser || {};
+  const homeRoute = getRoleHomeRoute(currentRole);
   return `
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="institution-logo">LD</div>
-        <div class="institution-title">
-          <h2>Store &amp; Purchase</h2>
-          <p>L.D. College of Engineering</p>
-        </div>
+        <a href="#/${homeRoute}" style="display:flex; align-items:center; gap:0.75rem; text-decoration:none;">
+          <div class="institution-logo">LD</div>
+          <div class="institution-title">
+            <h2>Store &amp; Purchase</h2>
+            <p>L.D. College of Engineering</p>
+          </div>
+        </a>
       </div>
       <nav class="sidebar-nav">
         ${renderSidebarNav(activeRoute)}
@@ -257,11 +287,17 @@ function renderAppShell(contentHtml, activeRoute = 'dashboard') {
         <div class="page-title">
           <h1>${getRouteTitle(activeRoute)}</h1>
         </div>
-        <div class="role-switcher-container">
-          <span class="role-badge">Role</span>
-          <select id="roleSelector" class="role-select">
-            ${ROLES.map(r => `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${formatRoleName(r)}</option>`).join('')}
-          </select>
+        <div class="user-profile-container">
+          <div class="user-profile-badge">
+            <div class="user-avatar">${(user.name || 'U').charAt(0)}</div>
+            <div class="user-info">
+              <span class="user-name">${user.name || 'User'}</span>
+              <span class="user-role-label">${formatRoleName(user.role || 'Unknown')}</span>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn-logout" title="Sign Out">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </header>
       <main class="content-body">
@@ -285,6 +321,9 @@ function formatRoleName(role) {
 }
 
 function getRouteTitle(route) {
+  if (route === 'delivery') {
+    return getDeliveryLabel(currentRole);
+  }
   const titles = {
     dashboard: 'Executive Dashboard',
     masters: 'Departments & Governance',
@@ -301,19 +340,182 @@ function getRouteTitle(route) {
   return titles[route] || 'Store & Purchase Management System';
 }
 
+// ============================================================
+// LOGIN PAGE VIEW (Executive Enterprise Two-Panel Portal)
+// ============================================================
+function renderLoginPage() {
+  return `
+    <div class="login-page-wrapper">
+      <!-- Left Panel: Institutional Showcase -->
+      <div class="login-brand-panel">
+        <div class="brand-panel-content">
+          <div class="brand-header">
+            <div class="brand-seal">
+              <span class="seal-letter">LD</span>
+            </div>
+            <div class="brand-institution">
+              <h2>L.D. College of Engineering</h2>
+              <p class="brand-sub">Ahmedabad &bull; Established 1948 &bull; Govt. of Gujarat</p>
+            </div>
+          </div>
+
+          <div class="brand-hero">
+            <div class="brand-tag">
+              <span class="pulse-dot"></span>
+              <span>Autonomous Govt. Engineering College</span>
+            </div>
+            <h1 class="brand-title">Store &amp; Purchase Management System</h1>
+            <p class="brand-desc">
+              Integrated institutional procurement platform automating the end-to-end lifecycle—from annual CTE demand aggregation and GeM pre-bid note sheets to committee sanctions and final payment vouchers.
+            </p>
+          </div>
+
+          <div class="brand-features">
+            <div class="feature-item">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Gujarat Procurement Policy 2024 Compliant</strong>
+                <span>Rigorous DLPC (&le; ₹5 Lakhs) &amp; DPC (&gt; ₹5 Lakhs) committee governance</span>
+              </div>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>GeM Portal Workflow Integration</strong>
+                <span>Automatic Gujarati note sheets, ATC generation &amp; EMD/e-PBG ledger tracking</span>
+              </div>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Role-Based Access &amp; Audit Trail</strong>
+                <span>Strict physical &amp; digital approval chains with zero unauthorized data leak</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="brand-footer">
+            <span>&copy; 2026 Store &amp; Purchase Section, L.D. College of Engineering</span>
+            <span class="badge-pill">Version 2.4.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Authentication & Persona Selector -->
+      <div class="login-auth-panel">
+        <div class="auth-panel-inner">
+          <div class="auth-header">
+            <span class="auth-category">Sign In Portal</span>
+            <h2>Institutional Authentication</h2>
+            <p>Enter your institutional email or select an authorized persona below.</p>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm" class="auth-form">
+            <div class="form-field">
+              <label for="loginEmail">Email Address</label>
+              <div class="input-with-icon">
+                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <input type="email" id="loginEmail" placeholder="e.g. principal@ldce.ac.in" required autocomplete="email" />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <div class="field-label-row">
+                <label for="loginPassword">Password</label>
+                <span class="field-hint">Default: <code>ldce@2026</code></span>
+              </div>
+              <div class="input-with-icon">
+                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
+              </div>
+            </div>
+
+            <div id="loginError" class="auth-error-banner" style="display:none;"></div>
+
+            <button type="submit" class="auth-submit-btn" id="loginSubmitBtn">
+              <span>Sign In to System</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </form>
+
+          <!-- Quick Persona Selection -->
+          <div class="persona-section">
+            <div class="persona-header">
+              <div class="persona-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Select Role Persona (1-Click Fill)</span>
+              </div>
+              <span class="persona-hint">Click any role to test authorization</span>
+            </div>
+
+            <div class="persona-grid">
+              ${DEMO_CREDENTIALS.map(c => `
+                <div class="persona-card" data-email="${c.email}" style="--accent-border: ${c.color}">
+                  <div class="persona-avatar" style="background: ${c.color}">
+                    ${c.name.split(' ').map(n => n[0]).filter(ch => ch !== '.').slice(0, 2).join('')}
+                  </div>
+                  <div class="persona-meta">
+                    <div class="persona-role-row">
+                      <span class="persona-role">${c.role}</span>
+                      <span class="persona-tag">${c.badge}</span>
+                    </div>
+                    <span class="persona-name">${c.name}</span>
+                    <span class="persona-email">${c.email}</span>
+                  </div>
+                  <div class="persona-arrow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // Router & Controller
 async function router() {
-  const hash = window.location.hash || '#/dashboard';
-  const route = hash.replace('#/', '') || 'dashboard';
+  // Sync currentUser/currentRole from stored auth
+  currentUser = api.getStoredUser();
+  currentRole = currentUser?.role || 'Principal';
+  const roleDefault = getRoleHomeRoute(currentRole);
+
+  const hash = window.location.hash || '#/' + roleDefault;
+  let route = hash.replace('#/', '') || roleDefault;
   const appEl = document.getElementById('app');
 
-  try {
-    if (!canAccess(route)) {
-      appEl.innerHTML = renderAppShell(renderAccessDenied(), route);
-      bindRoleSwitcher();
+  // ── Authentication Gate ──
+  if (route === 'login' || !api.isAuthenticated()) {
+    if (!api.isAuthenticated()) {
+      window.location.hash = '#/login';
+    }
+    appEl.innerHTML = renderLoginPage();
+    bindLoginEvents();
+    return;
+  }
+
+  // If the user lands on or attempts to access a route not permitted for their role,
+  // silently and immediately redirect them to their primary authorized section!
+  if (!canAccess(route)) {
+    const target = getRoleHomeRoute(currentRole);
+    if (route !== target) {
+      window.location.hash = '#/' + target;
       return;
     }
+  }
 
+  try {
     if (route === 'dashboard') {
       const data = await api.getDashboardMetrics();
       appEl.innerHTML = renderAppShell(renderDashboardView(data.data), 'dashboard');
@@ -350,9 +552,13 @@ async function router() {
       appEl.innerHTML = renderAppShell(renderCommitteeView(meetings.data), 'committee');
       bindCommitteeEvents();
     } else if (route === 'delivery') {
-      const orders = await api.getOrders();
-      const vouchers = await api.getVouchers();
-      appEl.innerHTML = renderAppShell(renderDeliveryView(orders.data, vouchers.data), 'delivery');
+      const orders = await api.getOrders().catch(() => ({ data: [] }));
+      const inspections = await api.getInspections().catch(() => ({ data: [] }));
+      let vouchers = { data: [] };
+      if (currentRole === 'StoreOfficer' || currentRole === 'AccountsOfficer' || currentRole === 'Principal') {
+        vouchers = await api.getVouchers().catch(() => ({ data: [] }));
+      }
+      appEl.innerHTML = renderAppShell(renderDeliveryView(orders.data, vouchers.data, inspections.data), 'delivery');
       bindDeliveryEvents();
     } else if (route === 'templates') {
       appEl.innerHTML = renderAppShell(renderTemplatesView(), 'templates');
@@ -363,20 +569,69 @@ async function router() {
       bindRepairsEvents();
     }
   } catch (err) {
-    appEl.innerHTML = renderAppShell(`<div class="card"><h3 style="color:var(--accent-red)">Error loading view: ${err.message}</h3></div>`, route);
+    appEl.innerHTML = renderAppShell(`<div class="card"><h3 style="color:var(--red-500)">Error loading view: ${err.message}</h3></div>`, route);
   }
 
-  // Bind Role Switcher
-  bindRoleSwitcher();
+  // Bind logout
+  bindLogoutEvent();
 }
 
-function bindRoleSwitcher() {
-  const selector = document.getElementById('roleSelector');
-  if (selector && !selector.hasAttribute('data-bound')) {
-    selector.setAttribute('data-bound', 'true');
-    selector.addEventListener('change', (e) => {
-      currentRole = e.target.value;
-      localStorage.setItem('ldce_user_role', currentRole);
+function bindLoginEvents() {
+  // Login form submission
+  const form = document.getElementById('loginForm');
+  if (form && !form.hasAttribute('data-bound')) {
+    form.setAttribute('data-bound', 'true');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+
+      errorEl.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="login-spinner"></span> <span>Signing in...</span>';
+
+      try {
+        await api.login(email, password);
+        currentUser = api.getStoredUser();
+        currentRole = currentUser?.role || 'Principal';
+        // Navigate directly to the role's tailored primary section
+        window.location.hash = '#/' + getRoleHomeRoute(currentRole);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Sign In to System</span><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
+      }
+    });
+  }
+
+  // Quick-fill persona cards
+  const cards = document.querySelectorAll('.persona-card');
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      cards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      const emailInput = document.getElementById('loginEmail');
+      const pwdInput = document.getElementById('loginPassword');
+      if (emailInput && pwdInput) {
+        emailInput.value = card.dataset.email;
+        pwdInput.value = 'ldce@2026';
+        emailInput.focus();
+      }
+    });
+  });
+}
+
+function bindLogoutEvent() {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn && !logoutBtn.hasAttribute('data-bound')) {
+    logoutBtn.setAttribute('data-bound', 'true');
+    logoutBtn.addEventListener('click', () => {
+      api.logout();
+      currentUser = null;
+      currentRole = 'Principal';
       router();
     });
   }
@@ -1185,22 +1440,87 @@ function bindCommitteeEvents() {
 }
 
 // ----------------------------------------------------
-// 9. DELIVERY & VOUCHERS (FORM-10 & 11)
+// 9. DELIVERY & INSPECTION / VOUCHERS (FORM-10 & 11)
 // ----------------------------------------------------
-function renderDeliveryView(orders, vouchers) {
-  const formHtml = canCreate('delivery') ? `
+function renderDeliveryView(orders, vouchers, inspections = []) {
+  const isExpert = currentRole === 'ExpertMember';
+  const isDept = currentRole === 'DeptRep' || currentRole === 'HOD';
+  const isAccounts = currentRole === 'AccountsOfficer';
+  const isStore = currentRole === 'StoreOfficer' || currentRole === 'Principal';
+
+  // Section 1: Physical Technical Inspection (FORM-10) Form
+  // Visible to ExpertMember, DeptRep, HOD, StoreOfficer, Principal
+  const canInspect = isExpert || isDept || isStore;
+  const inspectionFormHtml = canInspect ? `
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Pass for Payment Voucher (FORM-11)</h3>
+        <h3 class="card-title">Physical Equipment Inspection Certificate (FORM-10)</h3>
+      </div>
+      <form id="inspectionForm" class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">Select Purchase Order / Item</label>
+          <select id="insOrderId" class="form-control" required>
+            ${orders.map(o => `<option value="${o.id}">${o.order_no} &mdash; ${o.item_name || 'Supplied Item'} (${o.supplier_name})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vendor Invoice No &amp; Date</label>
+          <input type="text" id="insInvoice" class="form-control" placeholder="e.g. INV/2026/049 dt. 12/03/2026" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Material Receipt Date</label>
+          <input type="date" id="insReceiptDate" class="form-control" value="${new Date().toISOString().split('T')[0]}" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Technical Inspection Date</label>
+          <input type="date" id="insDate" class="form-control" value="${new Date().toISOString().split('T')[0]}" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Working / Acceptance Status</label>
+          <select id="insStatus" class="form-control">
+            <option value="Fully Functional &amp; Accepted">Fully Functional &amp; Accepted</option>
+            <option value="Accepted with Minor Rectification">Accepted with Minor Rectification</option>
+            <option value="Rejected / Specification Mismatch">Rejected / Specification Mismatch</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">Equipment Serial Numbers / Asset Identifiers</label>
+          <input type="text" id="insSerial" class="form-control" placeholder="e.g. SN-84920489, SN-84920490 (Comma separated)" required />
+        </div>
+        <div class="form-group full-width" style="display:flex; gap:1.5rem; margin-top:0.5rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="insSpecsOk" checked /> Technical specs match GeM Bid contract
+          </label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="insAccessoriesOk" checked /> Standard accessories, manuals &amp; warranty cards received
+          </label>
+        </div>
+        <div class="form-group full-width">
+          <button type="submit" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Sign &amp; Certify Technical Inspection
+          </button>
+        </div>
+      </form>
+    </div>
+  ` : '';
+
+  // Section 2: Pass for Payment Voucher (FORM-11)
+  // Only visible to StoreOfficer and AccountsOfficer (and Principal)
+  const canVoucher = isStore || isAccounts;
+  const voucherFormHtml = canVoucher ? `
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Pass for Payment Voucher (FORM-11) &mdash; Bill Passing Section</h3>
       </div>
       <form id="voucherForm" class="form-grid">
         <div class="form-group">
           <label class="form-label">Sanction Ref / Order No</label>
-          <input type="text" id="voucherRef" class="form-control" required />
+          <input type="text" id="voucherRef" class="form-control" placeholder="e.g. PO/2026/01" required />
         </div>
         <div class="form-group">
           <label class="form-label">Gross Invoice Amount (₹)</label>
-          <input type="number" id="voucherGross" class="form-control" required />
+          <input type="number" id="voucherGross" class="form-control" step="0.01" placeholder="0.00" required />
         </div>
         <div class="form-group">
           <label class="form-label">Central Stock Folio</label>
@@ -1208,32 +1528,158 @@ function renderDeliveryView(orders, vouchers) {
         </div>
         <div class="form-group">
           <label class="form-label">Deductions (Penalty/SD) (₹)</label>
-          <input type="number" id="voucherDeductions" class="form-control" value="0.00" />
+          <input type="number" id="voucherDeductions" class="form-control" value="0.00" step="0.01" />
         </div>
         <div class="form-group full-width">
           <label class="form-label">Account Head</label>
-          <input type="text" id="voucherHead" class="form-control" required />
+          <input type="text" id="voucherHead" class="form-control" value="State Grant (TED-5)" required />
         </div>
         <div class="form-group full-width">
           <button type="submit" class="btn btn-success">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
-            Process Payment Voucher
+            Process &amp; Authorize Payment Voucher
           </button>
         </div>
       </form>
     </div>
   ` : '';
 
+  // Section 3: Completed Inspections Registry Table
+  const inspectionsTableHtml = canInspect ? `
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Completed Technical Inspections &amp; Goods Inward Registry</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order Ref</th>
+              <th>Item Nomenclature</th>
+              <th>Vendor / Supplier</th>
+              <th>Inspection Date</th>
+              <th>Serial Numbers</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inspections && inspections.length > 0 ? inspections.map(ins => `
+              <tr>
+                <td><strong>${ins.order_no || 'PO-2026'}</strong></td>
+                <td>${ins.item_name || 'Lab Equipment'}</td>
+                <td>${ins.supplier_name || 'Government GeM Vendor'}</td>
+                <td>${new Date(ins.inspection_date).toLocaleDateString('en-GB')}</td>
+                <td><code style="font-size:0.75rem;">${ins.serial_numbers}</code></td>
+                <td><span class="badge badge-success">${ins.working_status}</span></td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td colspan="6" style="text-align:center; color:var(--neutral-400); padding:1.5rem;">
+                  No equipment inspection records logged yet. Orders awaiting technical inspection will appear here.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
+
+  // Section 4: Vouchers Table (only for Store & Accounts)
+  const vouchersTableHtml = canVoucher ? `
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Passed Payment Vouchers Ledger</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Voucher No</th>
+              <th>Sanction Ref</th>
+              <th>Gross (₹)</th>
+              <th>Deductions (₹)</th>
+              <th>Net Payable (₹)</th>
+              <th>Stock Folio</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${vouchers && vouchers.length > 0 ? vouchers.map(v => `
+              <tr>
+                <td><strong>${v.voucher_no}</strong></td>
+                <td>${v.sanction_ref}</td>
+                <td>₹${parseFloat(v.gross_amount).toLocaleString('en-IN')}</td>
+                <td>₹${(parseFloat(v.sd_retained || 0) + parseFloat(v.other_deductions || 0)).toLocaleString('en-IN')}</td>
+                <td><strong>₹${parseFloat(v.net_payable).toLocaleString('en-IN')}</strong></td>
+                <td>${v.stock_folio_no}</td>
+                <td><span class="badge badge-success">${v.status}</span></td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td colspan="7" style="text-align:center; color:var(--neutral-400); padding:1.5rem;">
+                  No payment vouchers passed yet.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
+
   return `
     ${renderAccessBanner('delivery')}
-    ${formHtml}
+    ${inspectionFormHtml}
+    ${voucherFormHtml}
+    ${inspectionsTableHtml}
+    ${vouchersTableHtml}
   `;
 }
 
 function bindDeliveryEvents() {
+  // Bind inspection form
+  document.getElementById('inspectionForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      order_id: document.getElementById('insOrderId').value,
+      invoice_no_date: document.getElementById('insInvoice').value,
+      receipt_date: document.getElementById('insReceiptDate').value,
+      inspection_date: document.getElementById('insDate').value,
+      working_status: document.getElementById('insStatus').value,
+      serial_numbers: document.getElementById('insSerial').value,
+      specs_verified: document.getElementById('insSpecsOk').checked,
+      accessories_ok: document.getElementById('insAccessoriesOk').checked,
+      inspector_ids: [currentUser?.id || 1]
+    };
+    try {
+      await api.createInspection(payload);
+      alert('Equipment Inspection Certificate signed & logged successfully!');
+      router();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  });
+
+  // Bind voucher form
   document.getElementById('voucherForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    alert('Voucher processed successfully (Demo)');
+    const payload = {
+      inspection_id: 1,
+      sanction_ref: document.getElementById('voucherRef').value,
+      gross_amount: document.getElementById('voucherGross').value,
+      stock_folio_no: document.getElementById('voucherFolio').value,
+      other_deductions: document.getElementById('voucherDeductions').value,
+      account_head: document.getElementById('voucherHead').value,
+      vendor_info: 'Verified GeM Supplier'
+    };
+    try {
+      await api.createVoucher(payload);
+      alert('Pass for Payment Voucher authorized successfully!');
+      router();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   });
 }
 

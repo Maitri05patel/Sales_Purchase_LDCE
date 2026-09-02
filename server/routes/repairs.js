@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get repair requests
-router.get('/requests', async (req, res) => {
+router.get('/requests', authorize('StoreOfficer', 'Principal', 'HOD'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT r.*, d.name as dept_name 
@@ -18,7 +19,7 @@ router.get('/requests', async (req, res) => {
 });
 
 // Create Repair Request (FORM-12)
-router.post('/requests', async (req, res) => {
+router.post('/requests', authorize('StoreOfficer', 'HOD'), async (req, res) => {
   const {
     dept_id, equipment_name, purchase_date, original_cost,
     breakdown_date, prev_repaired, last_repair_info, market_value, est_repair_cost, fault_desc

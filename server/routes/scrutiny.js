@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get all bids
 router.get('/bids', async (req, res) => {
@@ -19,7 +20,7 @@ router.get('/bids', async (req, res) => {
 });
 
 // Create a new Bid
-router.post('/bids', async (req, res) => {
+router.post('/bids', authorize('StoreOfficer'), async (req, res) => {
   const { bid_no, indent_id, bid_publish_date, bid_end_date, bid_opening_date } = req.body;
   try {
     const result = await db.executeTransaction(async (client) => {
@@ -53,7 +54,7 @@ router.get('/evaluations/:bidId', async (req, res) => {
 });
 
 // Add bidder technical evaluation (FORM-08)
-router.post('/evaluations', async (req, res) => {
+router.post('/evaluations', authorize('ExpertMember', 'StoreOfficer', 'HOD'), async (req, res) => {
   const { bid_id, bidder_name, param_specs, param_turnover, param_atc, disqualify_reason } = req.body;
   if (!bid_id || !bidder_name) {
     return res.status(400).json({ success: false, error: 'Bid ID and Bidder Name required' });

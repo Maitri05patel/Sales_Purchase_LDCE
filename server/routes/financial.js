@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get all financial instruments
-router.get('/instruments', async (req, res) => {
+router.get('/instruments', authorize('StoreOfficer', 'Principal', 'AccountsOfficer'), async (req, res) => {
   const { type, status } = req.query;
   let queryText = 'SELECT * FROM financial_instruments WHERE 1=1';
   const params = [];
@@ -28,7 +29,7 @@ router.get('/instruments', async (req, res) => {
 });
 
 // Create financial instrument (FORM-07)
-router.post('/instruments', async (req, res) => {
+router.post('/instruments', authorize('StoreOfficer'), async (req, res) => {
   const {
     instrument_type, bid_order_no, vendor_name, vendor_address,
     dd_number, dd_date, amount, bank_name, status
@@ -53,7 +54,7 @@ router.post('/instruments', async (req, res) => {
 });
 
 // Update status (e.g. Refunded to Vendor, Deposited in Account)
-router.put('/instruments/:id/status', async (req, res) => {
+router.put('/instruments/:id/status', authorize('StoreOfficer', 'AccountsOfficer'), async (req, res) => {
   const id = req.params.id;
   const { status, refund_ref } = req.body;
   try {

@@ -25,16 +25,19 @@ INSERT INTO departments (code, name) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- 2. Core Users / Faculty
-INSERT INTO users (dept_id, name, email, designation, role, phone) VALUES
-(4, 'Dr. C. H. Vithalani', 'principal@ldce.ac.in', 'Principal', 'Principal', '079-26302887'),
-(17, 'Prof. M. B. Patel', 'store_officer@ldce.ac.in', 'Store Officer', 'StoreOfficer', '9825000001'),
-(4, 'Dr. D. A. Parikh', 'hod_comp@ldce.ac.in', 'Professor & HOD', 'HOD', '9825000002'),
-(2, 'Dr. H. N. Shah', 'hod_mech@ldce.ac.in', 'Professor & HOD', 'HOD', '9825000003'),
-(1, 'Dr. A. M. Malek', 'hod_civil@ldce.ac.in', 'Professor & HOD', 'HOD', '9825000004'),
-(19, 'Shri K. R. Vyas', 'accounts@ldce.ac.in', 'Accounts Officer', 'AccountsOfficer', '9825000005'),
-(4, 'Prof. T. J. Raval', 'rep_comp1@ldce.ac.in', 'Associate Professor', 'DeptRep', '9825000006'),
-(4, 'Prof. N. K. Patel', 'expert_comp1@ldce.ac.in', 'Associate Professor', 'ExpertMember', '9825000007'),
-(2, 'Prof. R. J. Jani', 'expert_mech1@ldce.ac.in', 'Associate Professor', 'ExpertMember', '9825000008')
+-- Default password for all users: ldce@2026
+-- Bcrypt hash: $2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O
+INSERT INTO users (dept_id, name, email, password_hash, designation, role, phone) VALUES
+(4, 'Dr. C. H. Vithalani', 'principal@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Principal', 'Principal', '079-26302887'),
+(17, 'Prof. M. B. Patel', 'store@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Store Officer', 'StoreOfficer', '9825000001'),
+(4, 'Dr. D. A. Parikh', 'hod@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Professor & HOD', 'HOD', '9825000002'),
+(2, 'Dr. H. N. Shah', 'hod_mech@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Professor & HOD', 'HOD', '9825000003'),
+(1, 'Dr. A. M. Malek', 'hod_civil@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Professor & HOD', 'HOD', '9825000004'),
+(19, 'Shri K. R. Vyas', 'accounts@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Accounts Officer', 'AccountsOfficer', '9825000005'),
+(4, 'Prof. T. J. Raval', 'deptrep@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Associate Professor', 'DeptRep', '9825000006'),
+(4, 'Prof. N. K. Patel', 'expert@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Associate Professor', 'ExpertMember', '9825000007'),
+(2, 'Prof. R. J. Jani', 'expert_mech@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Associate Professor', 'ExpertMember', '9825000008'),
+(4, 'Prof. S. M. Desai', 'dlpc@ldce.ac.in', '$2b$10$0FJGl9ffFGeNNpjYrOvfcOBqShYOdAlntuLID7KSJJDTx7WH/Yd8O', 'Assistant Professor', 'DLPCMember', '9825000009')
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. CTE Demands (Sample Annual Proposals)

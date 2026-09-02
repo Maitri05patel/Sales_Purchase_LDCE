@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get purchase orders
 router.get('/orders', async (req, res) => {
@@ -19,7 +20,7 @@ router.get('/orders', async (req, res) => {
 });
 
 // Create Inspection (FORM-10)
-router.post('/inspections', async (req, res) => {
+router.post('/inspections', authorize('ExpertMember', 'DeptRep', 'StoreOfficer', 'HOD'), async (req, res) => {
   const {
     order_id, invoice_no_date, receipt_date, inspection_date,
     serial_numbers, specs_verified, accessories_ok, working_status, inspector_ids
@@ -46,8 +47,25 @@ router.post('/inspections', async (req, res) => {
   }
 });
 
+// Get completed inspections list
+router.get('/inspections', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT ins.*, po.order_no, po.supplier_name, i.item_name, d.name as dept_name
+      FROM inspections ins
+      JOIN purchase_orders po ON ins.order_id = po.id
+      LEFT JOIN indents i ON po.indent_id = i.id
+      LEFT JOIN departments d ON i.dept_id = d.id
+      ORDER BY ins.id DESC
+    `);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Create Pass for Payment Voucher (FORM-11) with ACID calculation
-router.post('/vouchers', async (req, res) => {
+router.post('/vouchers', authorize('StoreOfficer'), async (req, res) => {
   const {
     inspection_id, sanction_ref, vendor_info, gross_amount,
     stock_folio_no, account_head, sd_retained, other_deductions, chk_de_verified
@@ -94,8 +112,12 @@ router.post('/vouchers', async (req, res) => {
   }
 });
 
-// Get payment vouchers list
+// Get payment vouchers list (StoreOfficer, Principal, AccountsOfficer only; empty list for others)
 router.get('/vouchers', async (req, res) => {
+  const allowed = ['StoreOfficer', 'Principal', 'AccountsOfficer'];
+  if (!allowed.includes(req.user.role)) {
+    return res.json({ success: true, data: [] });
+  }
   try {
     const result = await db.query(`
       SELECT v.*, ins.invoice_no_date, po.order_no 

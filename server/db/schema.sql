@@ -21,10 +21,12 @@ CREATE TABLE IF NOT EXISTS users (
     dept_id INT REFERENCES departments(id) ON DELETE SET NULL,
     name VARCHAR(150) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL DEFAULT '',
     designation VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL, -- HOD, DeptRep, ExpertMember, StoreOfficer, Principal, AccountsOfficer, DLPCMember
     phone VARCHAR(20),
     is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -276,6 +278,7 @@ CREATE TABLE IF NOT EXISTS repair_requests (
 
 -- INDEXES FOR FAST PERFORMANCE & HIGH DATA CAPACITY
 CREATE INDEX IF NOT EXISTS idx_users_dept ON users(dept_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_cte_demands_dept ON cte_demands(dept_id, fin_year);
 CREATE INDEX IF NOT EXISTS idx_indents_dept ON indents(dept_id, status);
 CREATE INDEX IF NOT EXISTS idx_indents_fund ON indents(fund_type, budget_head);

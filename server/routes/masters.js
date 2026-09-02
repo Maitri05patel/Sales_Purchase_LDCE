@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get all active departments
 router.get('/departments', async (req, res) => {
@@ -39,7 +40,7 @@ router.get('/committees', async (req, res) => {
 });
 
 // Create department
-router.post('/departments', async (req, res) => {
+router.post('/departments', authorize('StoreOfficer', 'Principal'), async (req, res) => {
   const { code, name } = req.body;
   if (!code || !name) {
     return res.status(400).json({ success: false, error: 'Code and Name are required' });

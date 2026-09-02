@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get committee meetings
-router.get('/meetings', async (req, res) => {
+router.get('/meetings', authorize('StoreOfficer', 'Principal', 'DLPCMember', 'AccountsOfficer', 'HOD'), async (req, res) => {
   try {
     const result = await db.query(`
       SELECT m.*, i.item_name, i.fund_type, d.name as dept_name 
@@ -19,7 +20,7 @@ router.get('/meetings', async (req, res) => {
 });
 
 // Create DLPC / DPC Sanction (FORM-09)
-router.post('/meetings', async (req, res) => {
+router.post('/meetings', authorize('StoreOfficer', 'DLPCMember'), async (req, res) => {
   const {
     committee_type, meeting_ref, meeting_date, indent_id, bid_id,
     l1_vendor, l1_amount, rate_reasonability, recommendation, attendee_ids, chk_b_verified

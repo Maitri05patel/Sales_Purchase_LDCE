@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { authorize } = require('../middleware/auth');
 
 // Get all CTE demands with filtering
 router.get('/demands', async (req, res) => {
@@ -37,7 +38,7 @@ router.get('/demands', async (req, res) => {
 });
 
 // Create CTE demand (Statement 1 to 5)
-router.post('/demands', async (req, res) => {
+router.post('/demands', authorize('HOD', 'DeptRep', 'StoreOfficer'), async (req, res) => {
   const {
     fin_year, category, dept_id, item_name, qty, unit_rate,
     gem_available, gem_id, grant_head, against_condemn, norm_qty,
@@ -70,7 +71,7 @@ router.post('/demands', async (req, res) => {
 });
 
 // CTE Consolidated Summary
-router.get('/summary', async (req, res) => {
+router.get('/summary', authorize('StoreOfficer', 'Principal'), async (req, res) => {
   try {
     const categorySummary = await db.query(`
       SELECT category, COUNT(*) as item_count, SUM(total_cost) as total_amount

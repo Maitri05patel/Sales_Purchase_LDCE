@@ -1,10 +1,42 @@
 const API_BASE = 'http://localhost:5000/api';
 
+// ============================================================
+// JWT Token Management
+// ============================================================
+function getToken() {
+  return localStorage.getItem('ldce_auth_token');
+}
+
+function setToken(token) {
+  localStorage.setItem('ldce_auth_token', token);
+}
+
+function clearAuth() {
+  localStorage.removeItem('ldce_auth_token');
+  localStorage.removeItem('ldce_auth_user');
+}
+
+function getStoredUser() {
+  const raw = localStorage.getItem('ldce_auth_user');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function setStoredUser(user) {
+  localStorage.setItem('ldce_auth_user', JSON.stringify(user));
+}
+
+// ============================================================
+// Core Fetch Wrapper with JWT & 401 Interceptor
+// ============================================================
 export async function fetchApi(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const token = getToken();
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     },
     ...options,
@@ -15,16 +47,34 @@ export async function fetchApi(endpoint, options = {}) {
   }
 
   const response = await fetch(url, config);
+
+  // Handle 401 — session expired or invalid token
+  if (response.status === 401) {
+    clearAuth();
+    window.location.hash = '#/login';
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || 'Session expired. Please log in again.');
+  }
+
   const data = await response.json();
   if (!response.ok || data.success === false) {
     throw new Error(data.error || 'API Request Failed');
   }
   return data;
 }
+
 export async function downloadDocument(docId, entityId) {
+  const token = getToken();
   const url = `${API_BASE}/documents/${docId}?entityId=${entityId}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth();
+      window.location.hash = '#/login';
+      throw new Error('Session expired. Please log in again.');
+    }
     let errorMessage = 'Failed to generate document';
     try {
       const errorData = await response.json();
@@ -45,9 +95,17 @@ export async function downloadDocument(docId, entityId) {
 }
 
 export async function downloadTemplate(templatePath) {
+  const token = getToken();
   const url = `${API_BASE}/documents/template?path=${encodeURIComponent(templatePath)}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+  });
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth();
+      window.location.hash = '#/login';
+      throw new Error('Session expired. Please log in again.');
+    }
     let errorMessage = 'Failed to generate template';
     try {
       const errorData = await response.json();
@@ -67,9 +125,51 @@ export async function downloadTemplate(templatePath) {
   window.URL.revokeObjectURL(downloadUrl);
 }
 
+// ============================================================
+// Auth API Functions
+// ============================================================
+async function login(email, password) {
+  const url = `${API_BASE}/auth/login`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.error || 'Login failed.');
+  }
+  setToken(data.token);
+  setStoredUser(data.user);
+  return data;
+}
+
+async function getMe() {
+  return fetchApi('/auth/me');
+}
+
+function logout() {
+  clearAuth();
+  window.location.hash = '#/login';
+}
+
+function isAuthenticated() {
+  return !!getToken();
+}
+
 export const api = {
+  // Auth
+  login,
+  logout,
+  getMe,
+  isAuthenticated,
+  getToken,
+  getStoredUser,
+  clearAuth,
+
   downloadDocument,
   downloadTemplate,
+
   // Masters
   getDepartments: () => fetchApi('/masters/departments'),
   getUsers: () => fetchApi('/masters/users'),
@@ -112,6 +212,7 @@ export const api = {
 
   // Delivery & Pass for Payment
   getOrders: () => fetchApi('/delivery/orders'),
+  getInspections: () => fetchApi('/delivery/inspections'),
   createInspection: (data) => fetchApi('/delivery/inspections', { method: 'POST', body: data }),
   createVoucher: (data) => fetchApi('/delivery/vouchers', { method: 'POST', body: data }),
   getVouchers: () => fetchApi('/delivery/vouchers'),

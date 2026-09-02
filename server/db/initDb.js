@@ -60,6 +60,12 @@ async function initDatabase() {
     const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
     console.log('Applying database schema...');
     await targetClient.query(schemaSql);
+    // Ensure auth columns are present
+    await targetClient.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) NOT NULL DEFAULT '';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    `);
     console.log('Database schema applied successfully.');
 
     const seedSql = fs.readFileSync(path.join(__dirname, 'seed.sql'), 'utf-8');
