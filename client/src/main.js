@@ -29,95 +29,102 @@ const ROLES = [
 // ============================================================
 const ROLE_PERMISSIONS = {
   Principal: {
-    dashboard: 'view',      // Full View
-    masters:   'view',      // View only
-    cte:       'approve',   // Approve demands
-    indents:   'approve',   // Approve indents
-    notes:     'approve',   // Approve note sheets
-    financial: 'view',      // View ledger
-    scrutiny:  'view',      // View scrutiny
-    committee: 'approve',   // Approve DLPC/DPC
-    delivery:  'view',      // View inspection
+    dashboard: 'view',
+    masters:   'view',
+    cte:       'approve',
+    indents:   'approve',
+    notes:     'approve',
+    financial: 'view',
+    scrutiny:  'view',
+    committee: 'approve',
+    delivery:  'view',
     repairs:   'view',
-    templates: 'view',      // View repairs
+    templates: 'view',
+    documents: 'view',
   },
   StoreOfficer: {
-    dashboard: 'view',      // Full View
-    masters:   'manage',    // Full CRUD
-    cte:       'view',      // Aggregate / view
-    indents:   'create',    // Review & process
-    notes:     'create',    // Process note sheets
-    financial: 'manage',    // Full EMD/e-PBG management
-    scrutiny:  'create',    // Review scrutiny
-    committee: 'create',    // Secretary role
-    delivery:  'manage',    // Process stock & vouchers
+    dashboard: 'view',
+    masters:   'manage',
+    cte:       'view',
+    indents:   'create',
+    notes:     'create',
+    financial: 'manage',
+    scrutiny:  'create',
+    committee: 'create',
+    delivery:  'manage',
     repairs:   'manage',
-    templates: 'view',    // Full repair management
+    templates: 'view',
+    documents: 'manage',
   },
   HOD: {
-    dashboard: 'view',      // Dept View
-    masters:   'create',    // Manage reps
-    cte:       'create',    // Submit demands
-    indents:   'create',    // Create/Approve
-    notes:     'approve',   // Sign note sheets
-    financial: 'hidden',    // No access
-    scrutiny:  'approve',   // Sign scrutiny
-    committee: 'view',      // Member (view)
-    delivery:  'approve',   // Sign receipt
+    dashboard: 'view',
+    masters:   'create',
+    cte:       'create',
+    indents:   'create',
+    notes:     'approve',
+    financial: 'hidden',
+    scrutiny:  'approve',
+    committee: 'view',
+    delivery:  'approve',
     repairs:   'hidden',
-    templates: 'view',    // No access
+    templates: 'view',
+    documents: 'view',
   },
   DeptRep: {
-    dashboard: 'view',      // Dept View
-    masters:   'view',      // View only
-    cte:       'create',    // Prepare demands
-    indents:   'create',    // Draft indents
-    notes:     'create',    // Draft note sheets
-    financial: 'hidden',    // No access
-    scrutiny:  'view',      // Assist (view)
-    committee: 'hidden',    // No access
-    delivery:  'create',    // Receive goods
+    dashboard: 'view',
+    masters:   'view',
+    cte:       'create',
+    indents:   'create',
+    notes:     'create',
+    financial: 'hidden',
+    scrutiny:  'view',
+    committee: 'hidden',
+    delivery:  'create',
     repairs:   'hidden',
-    templates: 'view',    // No access
+    templates: 'view',
+    documents: 'view',
   },
   ExpertMember: {
-    dashboard: 'hidden',    // No dashboard
-    masters:   'view',      // View only
-    cte:       'view',      // Technical input (view)
-    indents:   'create',    // Technical specs
-    notes:     'hidden',    // No access
-    financial: 'hidden',    // No access
-    scrutiny:  'create',    // Evaluate bids
-    committee: 'view',      // Technical sign (view)
-    delivery:  'create',    // Inspect goods
+    dashboard: 'hidden',
+    masters:   'view',
+    cte:       'view',
+    indents:   'create',
+    notes:     'hidden',
+    financial: 'hidden',
+    scrutiny:  'create',
+    committee: 'view',
+    delivery:  'create',
     repairs:   'hidden',
-    templates: 'view',    // No access
+    templates: 'view',
+    documents: 'view',
   },
   AccountsOfficer: {
-    dashboard: 'view',      // Finance View
-    masters:   'view',      // View only
-    cte:       'hidden',    // No access
-    indents:   'hidden',    // No access
-    notes:     'view',      // Budget check (view)
-    financial: 'view',      // View ledger
-    scrutiny:  'hidden',    // No access
-    committee: 'view',      // Financial review
-    delivery:  'manage',    // Process payment
+    dashboard: 'view',
+    masters:   'view',
+    cte:       'hidden',
+    indents:   'hidden',
+    notes:     'view',
+    financial: 'view',
+    scrutiny:  'hidden',
+    committee: 'view',
+    delivery:  'manage',
     repairs:   'hidden',
-    templates: 'view',    // No access
+    templates: 'view',
+    documents: 'view',
   },
   DLPCMember: {
-    dashboard: 'view',      // View only
-    masters:   'hidden',    // No access
-    cte:       'hidden',    // No access
-    indents:   'hidden',    // No access
-    notes:     'hidden',    // No access
-    financial: 'hidden',    // No access
-    scrutiny:  'view',      // Review scrutiny
-    committee: 'approve',   // Sign MOM
-    delivery:  'hidden',    // No access
+    dashboard: 'view',
+    masters:   'hidden',
+    cte:       'hidden',
+    indents:   'hidden',
+    notes:     'hidden',
+    financial: 'hidden',
+    scrutiny:  'view',
+    committee: 'approve',
+    delivery:  'hidden',
     repairs:   'hidden',
-    templates: 'view',    // No access
+    templates: 'view',
+    documents: 'view',
   }
 };
 
@@ -217,8 +224,9 @@ const NAV_ITEMS = [
     { route: 'repairs', label: 'Equipment Repairs', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>' },
   ]},
 
-  { section: 'Templates Library', items: [
-    { route: 'templates', label: 'Document Templates', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
+  { section: 'Documents', items: [
+    { route: 'documents', label: 'Document Centre', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>' },
+    { route: 'templates', label: 'Raw Templates', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
   ]},
 ];
 
@@ -286,17 +294,18 @@ function formatRoleName(role) {
 
 function getRouteTitle(route) {
   const titles = {
-    dashboard: 'Executive Dashboard',
-    masters: 'Departments & Governance',
-    cte: 'Annual CTE Demand Entry',
-    indents: 'Purchase Indents & Specifications',
-    notes: 'Gujarati Administrative Note Sheets',
-    financial: 'EMD & Security Deposit Ledger',
-    scrutiny: 'Technical Scrutiny Matrix',
-    committee: 'DLPC / DPC Sanctions',
-    delivery: 'Inspection & Payment Vouchers',
-    repairs: 'Equipment Repair Requests',
-    templates: 'Document Templates Library'
+    dashboard:  'Executive Dashboard',
+    masters:    'Departments & Governance',
+    cte:        'Annual CTE Demand Entry',
+    indents:    'Purchase Indents & Specifications',
+    notes:      'Gujarati Administrative Note Sheets',
+    financial:  'EMD & Security Deposit Ledger',
+    scrutiny:   'Technical Scrutiny Matrix',
+    committee:  'DLPC / DPC Sanctions',
+    delivery:   'Inspection & Payment Vouchers',
+    repairs:    'Equipment Repair Requests',
+    documents:  'Document Centre — All 47 Documents',
+    templates:  'Raw Document Templates'
   };
   return titles[route] || 'Store & Purchase Management System';
 }
@@ -356,6 +365,22 @@ async function router() {
       bindDeliveryEvents();
     } else if (route === 'templates') {
       appEl.innerHTML = renderAppShell(renderTemplatesView(), 'templates');
+    } else if (route === 'documents') {
+      // Fetch all live entity lists so the user can pick which record to download
+      const [indents, bids, meetings, orders, vouchers, repairs, fi] = await Promise.all([
+        api.getIndents().then(r => r.data).catch(() => []),
+        api.getBids().then(r => r.data).catch(() => []),
+        api.getMeetings().then(r => r.data).catch(() => []),
+        api.getOrders().then(r => r.data).catch(() => []),
+        api.getVouchers().then(r => r.data).catch(() => []),
+        api.getRepairs().then(r => r.data).catch(() => []),
+        api.getFinancialInstruments().then(r => r.data).catch(() => []),
+      ]);
+      appEl.innerHTML = renderAppShell(
+        renderDocumentsView({ indents, bids, meetings, orders, vouchers, repairs, fi }),
+        'documents'
+      );
+      bindDocumentsEvents();
     } else if (route === 'repairs') {
       const depts = await api.getDepartments();
       const requests = await api.getRepairs();
@@ -644,6 +669,13 @@ function renderCteView(depts, demands) {
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Submitted Annual CTE Proposals</h3>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-01')">Statement 1 (Non-IT)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-02')">Statement 2 (IT)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-03')">Statement 3 (Furniture)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-07')">Consolidated Summary</button>
+          <a href="#/documents" class="btn btn-primary btn-sm">All Documents →</a>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="data-table">
@@ -774,7 +806,7 @@ function renderIndentsView(depts, indents) {
               <th>Total Cost (₹)</th>
               <th>Fund Type</th>
               <th>Status</th>
-              <th>Actions</th>
+              <th>Download Documents</th>
             </tr>
           </thead>
           <tbody>
@@ -788,7 +820,12 @@ function renderIndentsView(depts, indents) {
                 <td><span class="badge badge-info">${i.fund_type}</span></td>
                 <td><span class="badge badge-warning">${i.status}</span></td>
                 <td>
-                  <button class="btn btn-primary btn-sm" onclick="handleDownloadDoc('DOC-12', '${i.id || i.indent_no.split('/').pop()}')">Gen DOC-12</button>
+                  <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" title="Purchase Indent (Govt. Fund)" onclick="handleDownloadDoc('DOC-12', '${i.id}')">Purchase Indent</button>
+                    <button class="btn btn-secondary btn-sm" title="Technical Specification Sheet" onclick="handleDownloadDoc('DOC-14', '${i.id}')">Specs Sheet</button>
+                    <button class="btn btn-secondary btn-sm" title="Terms & Conditions (ATC)" onclick="handleDownloadDoc('DOC-15', '${i.id}')">Terms &amp; ATC</button>
+                    <button class="btn btn-warning btn-sm" title="Gujarati Note Sheet" onclick="handleDownloadDoc('DOC-17', '${i.id}')">Gujarati Note</button>
+                  </div>
                 </td>
               </tr>
             `).join('')}
@@ -1294,6 +1331,10 @@ function bindRepairsEvents() {
 window.addEventListener('hashchange', router);
 window.addEventListener('DOMContentLoaded', router);
 
+// ----------------------------------------------------
+// 11. DOCUMENT CENTRE
+// ----------------------------------------------------
+
 function renderTemplatesView() {
   const templates = [
     { path: '2.Intitiating process/Check list- A while initiate process.docx', name: 'Check list A' },
@@ -1309,7 +1350,8 @@ function renderTemplatesView() {
   return `
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Available Document Templates (Phase 2)</h3>
+        <h3 class="card-title">Raw Document Templates (Phase 2)</h3>
+        <a href="#/documents" class="btn btn-primary btn-sm">Open Document Centre →</a>
       </div>
       <div class="table-responsive">
         <table class="data-table">
@@ -1336,3 +1378,247 @@ function renderTemplatesView() {
     </div>
   `;
 }
+
+function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = [], vouchers = [], repairs = [], fi = [] } = {}) {
+  // Option builders
+  const indentOpts = indents.length
+    ? indents.map(i => `<option value="${i.id}">#${i.id} – ${(i.item_name||'').substring(0,40)} [${i.dept_code||i.dept_name||''}]</option>`).join('')
+    : '<option value="">— No Indents Found —</option>';
+  const bidOpts = bids.length
+    ? bids.map(b => `<option value="${b.id}">#${b.id} – ${b.bid_no||''}</option>`).join('')
+    : '<option value="">— No Bids Found —</option>';
+  const meetingOpts = meetings.length
+    ? meetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type||''} | ${m.meeting_ref||''}</option>`).join('')
+    : '<option value="">— No Meetings Found —</option>';
+  const orderOpts = orders.length
+    ? orders.map(o => `<option value="${o.id}">#${o.id} – ${o.order_no||''} | ${(o.item_name||'').substring(0,30)}</option>`).join('')
+    : '<option value="">— No Orders Found —</option>';
+  const voucherOpts = vouchers.length
+    ? vouchers.map(v => `<option value="${v.id}">#${v.id} – ${v.voucher_no||''}</option>`).join('')
+    : '<option value="">— No Vouchers Found —</option>';
+  const repairOpts = repairs.length
+    ? repairs.map(r => `<option value="${r.id}">#${r.id} – ${(r.equipment_name||'').substring(0,35)} [${r.dept_name||''}]</option>`).join('')
+    : '<option value="">— No Repairs Found —</option>';
+  const fiOpts = fi.length
+    ? fi.map(f => `<option value="${f.id}">#${f.id} – ${f.vendor_name||''} | ${f.dd_number||''}</option>`).join('')
+    : '<option value="">— No EMD Records Found —</option>';
+
+  function phaseCard(phaseNum, phaseName, phaseColor, docs) {
+    return `
+      <div class="card" style="border-left: 4px solid ${phaseColor}; margin-bottom:1.5rem;">
+        <div class="card-header" style="background:${phaseColor}18;">
+          <h3 class="card-title" style="color:${phaseColor}">
+            <span style="background:${phaseColor};color:#fff;padding:2px 10px;border-radius:20px;font-size:0.8rem;margin-right:8px;">Phase ${phaseNum}</span>
+            ${phaseName}
+          </h3>
+          <span class="badge" style="color:${phaseColor};background:${phaseColor}20;">${docs.length} document${docs.length > 1 ? 's' : ''}</span>
+        </div>
+        <div style="padding:1rem;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0.75rem;">
+            ${docs.map(d => docCard(d, phaseColor)).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function docCard({ docId, name, selector, note }) {
+    return `
+      <div class="doc-card" id="card-${docId}" style="border:1px solid var(--neutral-700,#333);border-radius:8px;padding:1rem;background:var(--neutral-850,#1a1a2e);display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.4rem;">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--neutral-100,#fff);line-height:1.35;">${name}</div>
+            <span id="status-${docId}" style="font-size:0.75rem;font-weight:600;"></span>
+          </div>
+          ${note ? `<div style="font-size:0.78rem;color:var(--neutral-400,#999);margin-bottom:0.75rem;">${note}</div>` : ''}
+          ${selector ? `<div style="margin-bottom:0.75rem;">${selector}</div>` : ''}
+        </div>
+        <button
+          class="btn btn-primary btn-sm doc-download-btn"
+          style="width:100%;justify-content:center;margin-top:0.5rem;"
+          data-doc="${docId}"
+          onclick="window.downloadDocFromCentre('${docId}')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Document (.docx)
+        </button>
+      </div>
+    `;
+  }
+
+  function sel(id, opts, label) {
+    return `<select id="${id}" class="form-control" style="font-size:0.8rem;padding:5px 8px;background:var(--neutral-800,#111);color:var(--neutral-100,#eee);border:1px solid var(--neutral-600,#444);border-radius:5px;width:100%;" title="${label}">${opts}</select>`;
+  }
+  function yearSel(id) {
+    return `<select id="${id}" class="form-control" style="font-size:0.8rem;padding:5px 8px;background:var(--neutral-800,#111);color:var(--neutral-100,#eee);border:1px solid var(--neutral-600,#444);border-radius:5px;width:100%;"><option value="2026-27">2026-27</option><option value="2025-26">2025-26</option></select>`;
+  }
+
+  return `
+    <style>
+      .doc-download-btn:disabled { opacity:0.5;cursor:not-allowed; }
+      .doc-download-btn.loading { background:var(--neutral-600,#444)!important; }
+    </style>
+
+    <div style="margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:0.85rem;color:var(--neutral-400,#888);">All 47 official procurement documents — generated live from your database data. Click any Download button to get the filled .docx file.</div>
+        </div>
+        <a href="#/templates" class="btn btn-secondary btn-sm">Raw Blank Templates →</a>
+      </div>
+    </div>
+
+    ${phaseCard(1, 'Committee & Governance Setup', '#8B5CF6', [
+      { docId:'DOC-08', name:'Office Order – Dept. Representatives', note:'Lists 2 reps per department for 2026-27', selector: yearSel('yr-08') },
+      { docId:'DOC-09', name:'Office Order – Expert Committees', note:'Discipline-wise expert panel orders', selector: yearSel('yr-09') },
+      { docId:'DOC-10', name:'Office Order – Special Committees (DLPC/DPC)', note:'Select committee type', selector:`<select id="ct-10" class="form-control" style="font-size:0.8rem;padding:5px;background:var(--neutral-800);color:var(--neutral-100);border:1px solid var(--neutral-600);border-radius:5px;width:100%;"><option value="DLPC">DLPC</option><option value="DPC">DPC</option><option value="WriteOff">Write-off Committee</option></select>` },
+      { docId:'DOC-11', name:'Note for Change in Committee / Representatives', note:'Fills generic change note' },
+    ])}
+
+    ${phaseCard(2, 'Annual CTE Demand Statements', '#0EA5E9', [
+      { docId:'DOC-01', name:'Statement 1 – Non-IT Equipment', selector: yearSel('yr-01') },
+      { docId:'DOC-02', name:'Statement 2 – IT Equipment', selector: yearSel('yr-02') },
+      { docId:'DOC-03', name:'Statement 3 – Furniture', selector: yearSel('yr-03') },
+      { docId:'DOC-04', name:'Statement 4 – Books & Periodicals', selector: yearSel('yr-04') },
+      { docId:'DOC-05', name:'Statement 5 – Maintenance & AMC', selector: yearSel('yr-05') },
+      { docId:'DOC-06', name:'Summary of IT Items (All Depts)', selector: yearSel('yr-06') },
+      { docId:'DOC-07', name:'CTE Consolidated Summary', selector: yearSel('yr-07') },
+    ])}
+
+    ${phaseCard(3, 'Purchase Indent, Specs, ATC & Note Sheet', '#10B981', [
+      { docId:'DOC-12', name:'Purchase Indent – Govt. Fund', note:'Select the indent', selector: sel('ind-12', indentOpts, 'Select Indent') },
+      { docId:'DOC-13', name:'Purchase Indent – Non-Govt. Fund', note:'Select the indent', selector: sel('ind-13', indentOpts, 'Select Indent') },
+      { docId:'DOC-14', name:'Specification Sheet', note:'Select the indent', selector: sel('ind-14', indentOpts, 'Select Indent') },
+      { docId:'DOC-15', name:'Additional Terms & Conditions (ATC)', note:'Select the indent', selector: sel('ind-15', indentOpts, 'Select Indent') },
+      { docId:'DOC-16', name:'General GeM Guidelines Sheet', note:'Standard guidelines' },
+      { docId:'DOC-17', name:'Note for Purchase – New Item (Gujarati)', note:'Select the indent', selector: sel('ind-17', indentOpts, 'Select Indent') },
+      { docId:'DOC-18', name:'Note for Purchase – Other Items', note:'Select the indent', selector: sel('ind-18', indentOpts, 'Select Indent') },
+      { docId:'DOC-19', name:'Checklist A – Before Initiating GeM Bid', note:'Select the indent', selector: sel('ind-19', indentOpts, 'Select Indent') },
+      { docId:'DOC-20', name:'Checklist C – Before Publishing Custom Bid/BOQ', note:'Select the indent', selector: sel('ind-20', indentOpts, 'Select Indent') },
+    ])}
+
+    ${phaseCard(4, 'EMD & Security Deposit (e-PBG) Ledger', '#F59E0B', [
+      { docId:'DOC-21', name:'EMD Refund Letter to Unsuccessful Bidder', note:'Select the EMD/e-PBG record', selector: sel('fi-21', fiOpts, 'Select EMD Record') },
+      { docId:'DOC-22', name:'Note for Security Deposit Submission to Accounts', note:'Select the EMD/e-PBG record', selector: sel('fi-22', fiOpts, 'Select EMD Record') },
+    ])}
+
+    ${phaseCard(5, 'Technical Scrutiny & Committee Approval', '#EF4444', [
+      { docId:'DOC-23', name:'Bid Scrutiny Report (Evaluation Matrix)', note:'Select the bid', selector: sel('bid-23', bidOpts, 'Select Bid') },
+      { docId:'DOC-24', name:'Reasons for Disqualification Sheet', note:'Select the bid', selector: sel('bid-24', bidOpts, 'Select Bid') },
+      { docId:'DOC-25', name:'DLPC Agenda & Proposal', note:'Select the committee meeting', selector: sel('mtg-25', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-26', name:'DLPC Rate Reasonability Certificate', note:'Select the committee meeting', selector: sel('mtg-26', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-27', name:'DLPC Minutes of Meeting (MOM)', note:'Select the committee meeting', selector: sel('mtg-27', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-28', name:'Checklist B – Final Approval Package', note:'Select the committee meeting', selector: sel('mtg-28', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-29', name:'Note – Direct Purchase Against Bid (DLPC)', note:'Select the committee meeting', selector: sel('mtg-29', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-30', name:'DPC Proposal Document Index', note:'Select the DPC meeting', selector: sel('mtg-30', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-31', name:'DPC Forwarding Letter to Principal', note:'Select the DPC meeting', selector: sel('mtg-31', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-32', name:'GeM Agenda Format – DPC', note:'Select the DPC meeting', selector: sel('mtg-32', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-33', name:'Institute BID Certificate', note:'Select the DPC meeting', selector: sel('mtg-33', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-34', name:'L1 INFO Sheet for DPC', note:'Select the DPC meeting', selector: sel('mtg-34', meetingOpts, 'Select Meeting') },
+      { docId:'DOC-35', name:'DPC Minutes of Meeting (MOM)', note:'Select the DPC meeting', selector: sel('mtg-35', meetingOpts, 'Select Meeting') },
+    ])}
+
+    ${phaseCard(6, 'Goods Delivery, Inspection & Bill Passing', '#06B6D4', [
+      { docId:'DOC-36', name:'Department Material Receipt Note', note:'Select the purchase order', selector: sel('ord-36', orderOpts, 'Select Purchase Order') },
+      { docId:'DOC-37', name:'Technical Inspection Report', note:'Select the voucher', selector: sel('vch-37', voucherOpts, 'Select Voucher') },
+      { docId:'DOC-38', name:'Pass for Payment Voucher', note:'Select the voucher', selector: sel('vch-38', voucherOpts, 'Select Voucher') },
+      { docId:'DOC-39', name:'Checklist D & E – Bill Verification', note:'Select the voucher', selector: sel('vch-39', voucherOpts, 'Select Voucher') },
+      { docId:'DOC-40', name:'Procurement Progress Status Report', note:'Financial year', selector: yearSel('yr-40') },
+    ])}
+
+    ${phaseCard(7, 'Non-GeM, Services & Equipment Repairs', '#84CC16', [
+      { docId:'DOC-41', name:'Inquiry Letter (Non-GeM Local Purchase)', note:'Select the indent', selector: sel('ind-41', indentOpts, 'Select Indent') },
+      { docId:'DOC-42', name:'Comparative Statement (Govt/Non-Govt Fund)', note:'Generic comparative statement' },
+      { docId:'DOC-43', name:'Purchase Order (Non-GeM / Local)', note:'Select the purchase order', selector: sel('ord-43', orderOpts, 'Select Purchase Order') },
+      { docId:'DOC-44', name:'Repairable Equipment Register', note:'All repairs included automatically' },
+      { docId:'DOC-45', name:'Note for Approval of Repairing', note:'Select the repair request', selector: sel('rep-45', repairOpts, 'Select Repair Request') },
+      { docId:'DOC-46', name:'Work Order (WO – Repairing)', note:'Select the repair request', selector: sel('rep-46', repairOpts, 'Select Repair Request') },
+      { docId:'DOC-47', name:'Pass for Payment (Non-GeM & Repair)', note:'Generic pass for payment (repair)' },
+    ])}
+  `;
+}
+
+// Entity ID resolution for each doc
+const DOC_ENTITY_MAP = {
+  'DOC-01': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-01')?.value || '2026-27' } }),
+  'DOC-02': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-02')?.value || '2026-27' } }),
+  'DOC-03': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-03')?.value || '2026-27' } }),
+  'DOC-04': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-04')?.value || '2026-27' } }),
+  'DOC-05': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-05')?.value || '2026-27' } }),
+  'DOC-06': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-06')?.value || '2026-27' } }),
+  'DOC-07': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-07')?.value || '2026-27' } }),
+  'DOC-08': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-08')?.value || '2026-27' } }),
+  'DOC-09': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-09')?.value || '2026-27' } }),
+  'DOC-10': () => ({ entityId: null, extra: { fin_year: '2026-27', committee_type: document.getElementById('ct-10')?.value || 'DLPC' } }),
+  'DOC-11': () => ({ entityId: null, extra: {} }),
+  'DOC-12': () => ({ entityId: document.getElementById('ind-12')?.value }),
+  'DOC-13': () => ({ entityId: document.getElementById('ind-13')?.value }),
+  'DOC-14': () => ({ entityId: document.getElementById('ind-14')?.value }),
+  'DOC-15': () => ({ entityId: document.getElementById('ind-15')?.value }),
+  'DOC-16': () => ({ entityId: null, extra: {} }),
+  'DOC-17': () => ({ entityId: document.getElementById('ind-17')?.value }),
+  'DOC-18': () => ({ entityId: document.getElementById('ind-18')?.value }),
+  'DOC-19': () => ({ entityId: document.getElementById('ind-19')?.value }),
+  'DOC-20': () => ({ entityId: document.getElementById('ind-20')?.value }),
+  'DOC-21': () => ({ entityId: document.getElementById('fi-21')?.value }),
+  'DOC-22': () => ({ entityId: document.getElementById('fi-22')?.value }),
+  'DOC-23': () => ({ entityId: document.getElementById('bid-23')?.value }),
+  'DOC-24': () => ({ entityId: document.getElementById('bid-24')?.value }),
+  'DOC-25': () => ({ entityId: document.getElementById('mtg-25')?.value }),
+  'DOC-26': () => ({ entityId: document.getElementById('mtg-26')?.value }),
+  'DOC-27': () => ({ entityId: document.getElementById('mtg-27')?.value }),
+  'DOC-28': () => ({ entityId: document.getElementById('mtg-28')?.value }),
+  'DOC-29': () => ({ entityId: document.getElementById('mtg-29')?.value }),
+  'DOC-30': () => ({ entityId: document.getElementById('mtg-30')?.value }),
+  'DOC-31': () => ({ entityId: document.getElementById('mtg-31')?.value }),
+  'DOC-32': () => ({ entityId: document.getElementById('mtg-32')?.value }),
+  'DOC-33': () => ({ entityId: document.getElementById('mtg-33')?.value }),
+  'DOC-34': () => ({ entityId: document.getElementById('mtg-34')?.value }),
+  'DOC-35': () => ({ entityId: document.getElementById('mtg-35')?.value }),
+  'DOC-36': () => ({ entityId: document.getElementById('ord-36')?.value }),
+  'DOC-37': () => ({ entityId: document.getElementById('vch-37')?.value }),
+  'DOC-38': () => ({ entityId: document.getElementById('vch-38')?.value }),
+  'DOC-39': () => ({ entityId: document.getElementById('vch-39')?.value }),
+  'DOC-40': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-40')?.value || '2026-27' } }),
+  'DOC-41': () => ({ entityId: document.getElementById('ind-41')?.value }),
+  'DOC-42': () => ({ entityId: null, extra: {} }),
+  'DOC-43': () => ({ entityId: document.getElementById('ord-43')?.value }),
+  'DOC-44': () => ({ entityId: null, extra: {} }),
+  'DOC-45': () => ({ entityId: document.getElementById('rep-45')?.value }),
+  'DOC-46': () => ({ entityId: document.getElementById('rep-46')?.value }),
+  'DOC-47': () => ({ entityId: null, extra: {} }),
+};
+
+window.downloadDocFromCentre = async function(docId) {
+  const btn = document.querySelector(`[data-doc="${docId}"]`);
+  const statusEl = document.getElementById(`status-${docId}`);
+  if (!DOC_ENTITY_MAP[docId]) return;
+
+  const { entityId, extra = {} } = DOC_ENTITY_MAP[docId]();
+
+  // Validate that required entity is selected
+  if (entityId !== null && entityId !== undefined && !entityId) {
+    if (statusEl) { statusEl.textContent = '⚠ Select a record first'; statusEl.style.color = '#F59E0B'; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating…'; }
+  if (statusEl) { statusEl.textContent = 'Generating...'; statusEl.style.color = '#6C63FF'; }
+
+  try {
+    await api.downloadDocument(docId, entityId, extra);
+    if (statusEl) { statusEl.textContent = '✓ Downloaded'; statusEl.style.color = '#10B981'; }
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = '✗ Error: ' + err.message.substring(0, 40); statusEl.style.color = '#EF4444'; }
+    console.error(`[${docId}] Download error:`, err);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download .docx`;
+    }
+  }
+};
+
+function bindDocumentsEvents() {
+  // Event listeners handled via window.downloadDocFromCentre
+}
+

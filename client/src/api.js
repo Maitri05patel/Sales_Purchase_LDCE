@@ -21,8 +21,9 @@ export async function fetchApi(endpoint, options = {}) {
   }
   return data;
 }
-export async function downloadDocument(docId, entityId) {
-  const url = `${API_BASE}/documents/${docId}?entityId=${entityId}`;
+export async function downloadDocument(docId, entityId, extraParams = {}) {
+  const params = new URLSearchParams({ ...(entityId ? { entityId } : {}), ...extraParams }).toString();
+  const url = `${API_BASE}/documents/${docId}${params ? '?' + params : ''}`;
   const response = await fetch(url);
   if (!response.ok) {
     let errorMessage = 'Failed to generate document';
@@ -32,12 +33,20 @@ export async function downloadDocument(docId, entityId) {
     } catch(e) {}
     throw new Error(errorMessage);
   }
+
+  // Extract filename from Content-Disposition header if present
+  let filename = `LDCE_Document_${docId}.docx`;
+  const disposition = response.headers.get('Content-Disposition');
+  if (disposition && disposition.includes('filename=')) {
+    const match = disposition.match(/filename=["']?([^"']+)["']?/);
+    if (match && match[1]) filename = match[1];
+  }
   
   const blob = await response.blob();
   const downloadUrl = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = downloadUrl;
-  a.download = `${docId}-${entityId}.docx`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -119,6 +128,9 @@ export const api = {
   // Repairs
   getRepairs: () => fetchApi('/repairs/requests'),
   createRepair: (data) => fetchApi('/repairs/requests', { method: 'POST', body: data }),
+
+  // Documents
+  getDocumentCatalog: () => fetchApi('/documents'),
 
   // Dashboard
   getDashboardMetrics: () => fetchApi('/dashboard/metrics'),
