@@ -201,32 +201,52 @@ class DocumentGenerator {
       // ── Phase 2: CTE Statements ─────────────────────────────────────────
       case 'DOC-01': {
         const items = await fetchCTEData(extra.fin_year, 'Non-IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-01', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-01', { fin_year: extra.fin_year, items });
       }
       case 'DOC-02': {
         const items = await fetchCTEData(extra.fin_year, 'IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-02', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-02', { fin_year: extra.fin_year, items });
       }
       case 'DOC-03': {
         const items = await fetchCTEData(extra.fin_year, 'Furniture');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-03', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-03', { fin_year: extra.fin_year, items });
       }
       case 'DOC-04': {
         const items = await fetchCTEData(extra.fin_year, 'Books');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-04', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-04', { fin_year: extra.fin_year, items });
       }
       case 'DOC-05': {
         const items = await fetchCTEData(extra.fin_year, 'Maintenance');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-05', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-05', { fin_year: extra.fin_year, items });
       }
       case 'DOC-06': {
         const items = await fetchCTEData(extra.fin_year, 'IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCITSummary.generateExcel({ fin_year: extra.fin_year, items });
+        }
         return DOCITSummary.generate({ fin_year: extra.fin_year, items });
       }
       case 'DOC-07': {
-        const catRes = await db.query(`SELECT category, COUNT(*) as item_count, SUM(total_cost) as total_amount FROM cte_demands ${extra.fin_year ? "WHERE fin_year = $1" : ""} GROUP BY category`, extra.fin_year ? [extra.fin_year] : []);
-        const grantRes = await db.query(`SELECT grant_head, COUNT(*) as item_count, SUM(total_cost) as total_amount FROM cte_demands ${extra.fin_year ? "WHERE fin_year = $1" : ""} GROUP BY grant_head`, extra.fin_year ? [extra.fin_year] : []);
-        return DOCCTESummary.generate({ fin_year: extra.fin_year, byCategory: catRes.rows, byGrant: grantRes.rows });
+        const items = await fetchCTEData(extra.fin_year, null);
+        if (extra.format === 'xlsx') {
+          return DOCCTESummary.generateExcel({ fin_year: extra.fin_year, items });
+        }
+        return DOCCTESummary.generate({ fin_year: extra.fin_year, items });
       }
 
       // ── Phase 1: Committee Orders ───────────────────────────────────────

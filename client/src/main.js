@@ -600,61 +600,180 @@ function bindMastersEvents() {
 function renderCteView(depts, demands) {
   const formHtml = canCreate('cte') ? `
     <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Submit Annual CTE Demand (Statements 1 to 5)</h3>
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 class="card-title">Submit Annual CTE Demand</h3>
+        <span id="cteBadge" class="badge badge-info" style="font-size:0.75rem;">Statement 1: 19 Government Specifications</span>
       </div>
       <form id="cteForm" class="form-grid">
+        <!-- Core Parameters -->
         <div class="form-group">
-          <label class="form-label">Financial Year</label>
+          <label class="form-label">Financial Year <span style="color:#ef4444;">*</span></label>
           <select id="cteFinYear" class="form-control">
             <option value="2026-27">2026-27</option>
             <option value="2027-28">2027-28</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Category (Statement Type)</label>
+          <label class="form-label">Category (Statement Type) <span style="color:#ef4444;">*</span></label>
           <select id="cteCategory" class="form-control">
-            <option value="Non-IT Equipment">Statement 1: Non-IT Equipment</option>
-            <option value="IT Equipment">Statement 2: IT Equipment</option>
-            <option value="Furniture">Statement 3: Furniture</option>
+            <option value="Non-IT Equipment">Statement 1: Non-IT Equipment (19 Cols)</option>
+            <option value="IT Equipment">Statement 2: IT Equipment (20 Cols)</option>
+            <option value="Furniture">Statement 3: Furniture (9 Cols)</option>
             <option value="Books">Statement 4: Books & Periodicals</option>
             <option value="Maintenance">Statement 5: Maintenance & AMC</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Department</label>
+          <label class="form-label">Department / Discipline <span style="color:#ef4444;">*</span></label>
           <select id="cteDept" class="form-control">
             ${depts.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Grant Head</label>
+          <label class="form-label">Proposed Grant Head <span style="color:#ef4444;">*</span></label>
           <select id="cteGrantHead" class="form-control">
             <option value="State Grant (TED-5)">State Grant (TED-5)</option>
             <option value="State Grant (TED-11)">State Grant (TED-11)</option>
             <option value="Center Grant">Center Grant</option>
             <option value="Student Welfare">Student Welfare</option>
+            <option value="Other Grant">Other Grant</option>
           </select>
         </div>
-        <div class="form-group full-width">
-          <label class="form-label">Item Nomenclature / Description</label>
-          <input type="text" id="cteItemName" class="form-control" placeholder="Full technical item title" required />
+
+        <!-- Item & Financials -->
+        <div class="form-group full-width" id="grpItemNameText">
+          <label class="form-label">Item Nomenclature / Description <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="cteItemName" class="form-control" placeholder="Full technical item title (e.g. Dual Desk / Executive Table / Lathe Machine)" required />
+        </div>
+        <div class="form-group full-width" id="grpItemNameIT" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label class="form-label" style="margin-bottom:0;">Name of IT Item <span style="color:#ef4444;">*</span> <small style="color:#999;">(Select from 14 Official CTE IT Categories)</small></label>
+            <button type="button" id="btnAddNewITItem" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:0.75rem;height:auto;" title="Store Officer / User can add new standard IT item">+ Add New IT Item</button>
+          </div>
+          <select id="cteItemNameSelect" class="form-control">
+            <!-- options generated dynamically from official IT items -->
+          </select>
+          <div id="grpCustomITInput" style="margin-top:8px;display:none;">
+            <input type="text" id="cteCustomItemName" class="form-control" placeholder="Type new / custom IT item title..." />
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Quantity Required</label>
+          <label class="form-label">Qty. Required <span style="color:#ef4444;">*</span></label>
           <input type="number" id="cteQty" class="form-control" min="1" value="1" required />
         </div>
         <div class="form-group">
-          <label class="form-label">Approx Unit Rate (₹)</label>
+          <label class="form-label">Approx. Rate as per GeM (₹) <span style="color:#ef4444;">*</span></label>
           <input type="number" id="cteRate" class="form-control" step="0.01" placeholder="0.00" required />
         </div>
-        <div class="form-group full-width">
-          <label class="form-label">Detailed Academic / Laboratory Justification</label>
-          <textarea id="cteJustification" class="form-control" required placeholder="Academic necessity, AICTE/GTU norms compliance justification..."></textarea>
+        <div class="form-group">
+          <label class="form-label">Total Amount (₹)</label>
+          <input type="text" id="cteTotalCost" class="form-control" placeholder="Auto-calculated" readonly style="background:var(--neutral-800,#1a1a2e);font-weight:700;color:#10B981;" />
         </div>
+        <div class="form-group">
+          <label class="form-label">Available on GeM? <span style="color:#ef4444;">*</span></label>
+          <select id="cteGemAvailable" class="form-control">
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Available Qty in Institute <small style="color:#999;">(In Stock)</small></label>
+          <input type="number" id="cteAvailableQty" class="form-control" min="0" value="0" />
+        </div>
+
+        <!-- Statement 1 Specific: Annual Expenditure & Procurement Model -->
+        <div class="form-group full-width dynamic-sec sec-stmt1">
+          <label class="form-label">Total Approx Annual Capital + Recurring Exp (₹) <small style="color:#999;">(Col 9 - Statement 1)</small></label>
+          <input type="number" id="cteAnnualExp" class="form-control" step="0.01" placeholder="Leave blank if no recurring cost (will use Total Amount)" />
+        </div>
+        <div class="form-group dynamic-sec sec-stmt1">
+          <label class="form-label">Procurement Model <small style="color:#999;">(Col 10 - Statement 1)</small></label>
+          <select id="cteProcModel" class="form-control">
+            <option value="New Purchase">New Purchase</option>
+            <option value="Rental">Rental</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
+        </div>
+
+        <!-- Statement 1 & 2 Lifecycle & Norms Specific -->
+        <div class="form-group dynamic-sec sec-lifecycle">
+          <label class="form-label">Procured Against Condemn Item?</label>
+          <select id="cteAgainstCondemn" class="form-control">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+        <div class="form-group dynamic-sec sec-lifecycle">
+          <label class="form-label">Required Qty as per Norms</label>
+          <input type="number" id="cteNormQty" class="form-control" min="0" value="0" />
+        </div>
+        <div class="form-group dynamic-sec sec-lifecycle">
+          <label class="form-label">Procurement Year of Available Item</label>
+          <input type="text" id="cteProcYear" class="form-control" placeholder="e.g. 2020-21 or -" value="-" />
+        </div>
+        <div class="form-group dynamic-sec sec-lifecycle">
+          <label class="form-label">Condition of Available Item</label>
+          <select id="cteStockCond" class="form-control">
+            <option value="Working">Working</option>
+            <option value="Non-Working">Non-Working</option>
+            <option value="Obsolete">Obsolete</option>
+            <option value="Not as per requirement">Not as per requirement</option>
+          </select>
+        </div>
+        <div class="form-group dynamic-sec sec-lifecycle">
+          <label class="form-label">Estimated Lifespan</label>
+          <select id="cteLifespan" class="form-control">
+            <option value="10 Years">10 Years</option>
+            <option value="7 Years">7 Years</option>
+            <option value="5-7 Years">5-7 Years (IT)</option>
+            <option value="5 Years">5 Years</option>
+            <option value="3 Years">3 Years</option>
+            <option value="15 Years">15 Years</option>
+          </select>
+        </div>
+
+        <!-- Statement 2 IT Specific Fields -->
+        <div class="form-group full-width dynamic-sec sec-stmt2">
+          <label class="form-label">Old Equipment Disposal Procedure <small style="color:#999;">(Col 15 - Statement 2)</small></label>
+          <input type="text" id="cteDisposalProc" class="form-control" value="Through Institute Scrap / Condemnation Committee" placeholder="What procedures have been followed for the disposal of old equipment?" />
+        </div>
+        <div class="form-group dynamic-sec sec-stmt2">
+          <label class="form-label">Is Standard Software? <small style="color:#999;">(Col 16 - Statement 2)</small></label>
+          <select id="cteIsStdSoftware" class="form-control">
+            <option value="N/A">N/A (Hardware / Equipment)</option>
+            <option value="Yes">Yes (Standard Software)</option>
+            <option value="No">No (Custom / Specialized Software)</option>
+          </select>
+        </div>
+        <div class="form-group dynamic-sec sec-stmt2">
+          <label class="form-label">Software Type <small style="color:#999;">(Col 17 - Statement 2)</small></label>
+          <select id="cteSoftwareType" class="form-control">
+            <option value="N/A">N/A (Hardware / Equipment)</option>
+            <option value="Educational">Educational</option>
+            <option value="Office Work">Office Work</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <!-- Statement 1 & 2 Operation, Maintenance & Usage -->
+        <div class="form-group full-width dynamic-sec sec-lifecycle">
+          <label class="form-label">Operation & Maintenance Plan</label>
+          <input type="text" id="cteMaintPlan" class="form-control" value="Through Department Technical Staff & AMC" placeholder="How operation and maintenance will be carried out" />
+        </div>
+        <div class="form-group full-width dynamic-sec sec-lifecycle">
+          <label class="form-label">Approximate Usage of Demanded Item</label>
+          <input type="text" id="cteApproxUsage" class="form-control" value="For UG/PG Laboratory & Research Practicals" placeholder="Target courses, laboratory practicals, or research usage" />
+        </div>
+
+        <!-- Detailed Justification (All Statements) -->
         <div class="form-group full-width">
-          <button type="submit" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <label class="form-label">Detailed Justification <span style="color:#ef4444;">*</span></label>
+          <textarea id="cteJustification" class="form-control" required rows="3" placeholder="Academic necessity, GTU/AICTE norms compliance, class/lab requirements..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+          <button type="submit" class="btn btn-primary" style="padding:10px 24px;font-weight:600;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Submit CTE Demand Entry
           </button>
         </div>
@@ -670,10 +789,20 @@ function renderCteView(depts, demands) {
       <div class="card-header">
         <h3 class="card-title">Submitted Annual CTE Proposals</h3>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-01')">Statement 1 (Non-IT)</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-02')">Statement 2 (IT)</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-03')">Statement 3 (Furniture)</button>
-          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-07')">Consolidated Summary</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-01', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Statement 1 (Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-01', 'docx')">Statement 1 (Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-02', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Statement 2 (IT Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-02', 'docx')">Statement 2 (IT Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-03', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Statement 3 (Furniture Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-03', 'docx')">Statement 3 (Furniture Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-04', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Statement 4 (Books Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-04', 'docx')">Statement 4 (Books Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-05', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Statement 5 (Maint Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-05', 'docx')">Statement 5 (Maint Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-06', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Summary IT (Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-06', 'docx')">Summary IT (Word)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-07', 'xlsx')"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Summary (Excel)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.downloadDocFromCentre('DOC-07', 'docx')">Summary (Word)</button>
           <a href="#/documents" class="btn btn-primary btn-sm">All Documents →</a>
         </div>
       </div>
@@ -688,7 +817,9 @@ function renderCteView(depts, demands) {
               <th>Qty</th>
               <th>Unit Rate (₹)</th>
               <th>Total Cost (₹)</th>
+              <th>GeM</th>
               <th>Grant Head</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -696,12 +827,14 @@ function renderCteView(depts, demands) {
               <tr>
                 <td>${d.fin_year}</td>
                 <td><span class="badge badge-info">${d.category}</span></td>
-                <td>${d.dept_code}</td>
+                <td>${d.dept_code || d.dept_name || ''}</td>
                 <td><strong>${d.item_name}</strong></td>
                 <td>${d.qty}</td>
                 <td>₹${parseFloat(d.unit_rate).toLocaleString('en-IN')}</td>
                 <td><strong>₹${parseFloat(d.total_cost).toLocaleString('en-IN')}</strong></td>
+                <td>${d.gem_available ? 'Yes' : 'No'}</td>
                 <td>${d.grant_head}</td>
+                <td><span class="badge badge-success">${d.status || 'Submitted'}</span></td>
               </tr>
             `).join('')}
           </tbody>
@@ -712,21 +845,208 @@ function renderCteView(depts, demands) {
 }
 
 function bindCteEvents() {
+  const qtyEl = document.getElementById('cteQty');
+  const rateEl = document.getElementById('cteRate');
+  const totalEl = document.getElementById('cteTotalCost');
+  const catEl = document.getElementById('cteCategory');
+  const badgeEl = document.getElementById('cteBadge');
+
+  const grpText = document.getElementById('grpItemNameText');
+  const grpIT = document.getElementById('grpItemNameIT');
+  const itemNameInput = document.getElementById('cteItemName');
+  const itemSelectEl = document.getElementById('cteItemNameSelect');
+  const customInputGrp = document.getElementById('grpCustomITInput');
+  const customItemInput = document.getElementById('cteCustomItemName');
+  const addBtn = document.getElementById('btnAddNewITItem');
+
+  const DEFAULT_IT_ITEMS = [
+    'Desktop Computer',
+    'Work Stations',
+    'Servers',
+    'Laptop',
+    'Softwares (Educational)',
+    'A4 Size Printer',
+    'A3 Size Printer',
+    'Copier Machine',
+    'CCTV Camera',
+    'Network Switch',
+    'UPS',
+    'Multi Media Projector',
+    'Smart/Interactive Board',
+    'Miscellaneous (Routers, Access Points, Computer Accessories etc.)'
+  ];
+
+  function getITItemsMaster() {
+    try {
+      const saved = localStorage.getItem('ldce_it_items_master');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [...DEFAULT_IT_ITEMS];
+  }
+
+  function saveITItemsMaster(items) {
+    try {
+      localStorage.setItem('ldce_it_items_master', JSON.stringify(items));
+    } catch (e) {}
+  }
+
+  function populateITSelect(selectedVal = '') {
+    if (!itemSelectEl) return;
+    const items = getITItemsMaster();
+    itemSelectEl.innerHTML = items.map(it => `<option value="${it}">${it}</option>`).join('') +
+      `<option value="__CUSTOM__">+ Add Custom / Other IT Item...</option>`;
+    if (selectedVal && items.includes(selectedVal)) {
+      itemSelectEl.value = selectedVal;
+    }
+  }
+
+  populateITSelect();
+
+  itemSelectEl?.addEventListener('change', () => {
+    if (itemSelectEl.value === '__CUSTOM__') {
+      if (customInputGrp) customInputGrp.style.display = 'block';
+      if (customItemInput) { customItemInput.required = true; customItemInput.focus(); }
+    } else {
+      if (customInputGrp) customInputGrp.style.display = 'none';
+      if (customItemInput) { customItemInput.required = false; }
+    }
+  });
+
+  addBtn?.addEventListener('click', () => {
+    const newItem = prompt('Enter new standard IT item name to add (Store Officer):');
+    if (newItem && newItem.trim()) {
+      const trimmed = newItem.trim();
+      const current = getITItemsMaster();
+      if (!current.includes(trimmed)) {
+        current.push(trimmed);
+        saveITItemsMaster(current);
+      }
+      populateITSelect(trimmed);
+      itemSelectEl.value = trimmed;
+      if (customInputGrp) customInputGrp.style.display = 'none';
+      if (customItemInput) { customItemInput.required = false; }
+    }
+  });
+
+  function calcTotal() {
+    const q = parseFloat(qtyEl?.value) || 0;
+    const r = parseFloat(rateEl?.value) || 0;
+    if (totalEl) {
+      totalEl.value = '₹' + (q * r).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+  }
+  qtyEl?.addEventListener('input', calcTotal);
+  rateEl?.addEventListener('input', calcTotal);
+
+  function updateCategoryFields() {
+    const cat = catEl?.value;
+    const stmt1Secs = document.querySelectorAll('.sec-stmt1');
+    const stmt2Secs = document.querySelectorAll('.sec-stmt2');
+    const lifecycleSecs = document.querySelectorAll('.sec-lifecycle');
+
+    if (cat === 'Non-IT Equipment') {
+      if (badgeEl) badgeEl.innerText = 'Statement 1: 19 Government Columns';
+      stmt1Secs.forEach(el => el.style.display = '');
+      stmt2Secs.forEach(el => el.style.display = 'none');
+      lifecycleSecs.forEach(el => el.style.display = '');
+      if (grpText) grpText.style.display = 'block';
+      if (grpIT) grpIT.style.display = 'none';
+      if (itemNameInput) itemNameInput.required = true;
+      if (itemSelectEl) itemSelectEl.required = false;
+    } else if (cat === 'IT Equipment') {
+      if (badgeEl) badgeEl.innerText = 'Statement 2: 20 Government Columns (Official IT Master)';
+      stmt1Secs.forEach(el => el.style.display = 'none');
+      stmt2Secs.forEach(el => el.style.display = '');
+      lifecycleSecs.forEach(el => el.style.display = '');
+      if (grpText) grpText.style.display = 'none';
+      if (grpIT) grpIT.style.display = 'block';
+      if (itemNameInput) itemNameInput.required = false;
+      if (itemSelectEl) itemSelectEl.required = true;
+    } else if (cat === 'Furniture') {
+      if (badgeEl) badgeEl.innerText = 'Statement 3: 9 Government Columns';
+      stmt1Secs.forEach(el => el.style.display = 'none');
+      stmt2Secs.forEach(el => el.style.display = 'none');
+      lifecycleSecs.forEach(el => el.style.display = 'none');
+      if (grpText) grpText.style.display = 'block';
+      if (grpIT) grpIT.style.display = 'none';
+      if (itemNameInput) itemNameInput.required = true;
+      if (itemSelectEl) itemSelectEl.required = false;
+    } else if (cat === 'Books') {
+      if (badgeEl) badgeEl.innerText = 'Statement 4: 5 Government Columns (Books)';
+      stmt1Secs.forEach(el => el.style.display = 'none');
+      stmt2Secs.forEach(el => el.style.display = 'none');
+      lifecycleSecs.forEach(el => el.style.display = 'none');
+      if (grpText) grpText.style.display = 'block';
+      if (grpIT) grpIT.style.display = 'none';
+      if (itemNameInput) itemNameInput.required = true;
+      if (itemSelectEl) itemSelectEl.required = false;
+    } else if (cat === 'Maintenance') {
+      if (badgeEl) badgeEl.innerText = 'Statement 5: 7 Government Columns (Maintenance & AMC)';
+      stmt1Secs.forEach(el => el.style.display = 'none');
+      stmt2Secs.forEach(el => el.style.display = 'none');
+      lifecycleSecs.forEach(el => el.style.display = 'none');
+      if (grpText) grpText.style.display = 'block';
+      if (grpIT) grpIT.style.display = 'none';
+      if (itemNameInput) itemNameInput.required = true;
+      if (itemSelectEl) itemSelectEl.required = false;
+    } else {
+      if (badgeEl) badgeEl.innerText = `${cat} Annual Proposal`;
+      stmt1Secs.forEach(el => el.style.display = 'none');
+      stmt2Secs.forEach(el => el.style.display = 'none');
+      lifecycleSecs.forEach(el => el.style.display = 'none');
+      if (grpText) grpText.style.display = 'block';
+      if (grpIT) grpIT.style.display = 'none';
+      if (itemNameInput) itemNameInput.required = true;
+      if (itemSelectEl) itemSelectEl.required = false;
+    }
+  }
+
+  catEl?.addEventListener('change', updateCategoryFields);
+  updateCategoryFields();
+
   document.getElementById('cteForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    let finalItemName = document.getElementById('cteItemName')?.value;
+    if (catEl?.value === 'IT Equipment') {
+      if (itemSelectEl?.value === '__CUSTOM__') {
+        finalItemName = customItemInput?.value?.trim() || 'Custom IT Item';
+        const current = getITItemsMaster();
+        if (!current.includes(finalItemName)) {
+          current.push(finalItemName);
+          saveITItemsMaster(current);
+        }
+      } else {
+        finalItemName = itemSelectEl?.value || finalItemName;
+      }
+    }
+
     const payload = {
       fin_year: document.getElementById('cteFinYear').value,
       category: document.getElementById('cteCategory').value,
       dept_id: document.getElementById('cteDept').value,
       grant_head: document.getElementById('cteGrantHead').value,
-      item_name: document.getElementById('cteItemName').value,
+      item_name: finalItemName,
       qty: document.getElementById('cteQty').value,
       unit_rate: document.getElementById('cteRate').value,
+      annual_expenditure: document.getElementById('cteAnnualExp')?.value || null,
+      gem_available: document.getElementById('cteGemAvailable').value === 'Yes',
+      procurement_model: document.getElementById('cteProcModel')?.value || 'New Purchase',
+      against_condemn: document.getElementById('cteAgainstCondemn')?.value === 'Yes',
+      norm_qty: document.getElementById('cteNormQty')?.value || 0,
+      available_qty: document.getElementById('cteAvailableQty')?.value || 0,
+      procurement_year: document.getElementById('cteProcYear')?.value || '-',
+      stock_condition: document.getElementById('cteStockCond')?.value || 'Working',
+      lifespan: document.getElementById('cteLifespan')?.value || (catEl?.value === 'IT Equipment' ? '5-7 Years' : '10 Years'),
+      disposal_procedure: document.getElementById('cteDisposalProc')?.value || 'Through Institute Scrap / Condemnation Committee',
+      is_standard_software: document.getElementById('cteIsStdSoftware')?.value || 'N/A',
+      software_type: document.getElementById('cteSoftwareType')?.value || 'N/A',
+      maint_plan: document.getElementById('cteMaintPlan')?.value || 'Through Department Staff & AMC',
+      approx_usage: document.getElementById('cteApproxUsage')?.value || 'For Laboratory & Classroom Practicals',
       justification: document.getElementById('cteJustification').value
     };
     try {
       await api.createCteDemand(payload);
-      alert('CTE Demand recorded successfully!');
+      alert('CTE Demand recorded successfully with all specifications!');
       router();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -1423,6 +1743,39 @@ function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = 
   }
 
   function docCard({ docId, name, selector, note }) {
+    const isDualFormat = ['DOC-01', 'DOC-02', 'DOC-03', 'DOC-04', 'DOC-05', 'DOC-06', 'DOC-07'].includes(docId);
+    const actionBtns = isDualFormat ? `
+      <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+        <button
+          class="btn btn-primary btn-sm doc-download-btn"
+          style="flex:1;justify-content:center;font-size:0.78rem;padding:6px 8px;"
+          data-doc="${docId}"
+          data-format="xlsx"
+          onclick="window.downloadDocFromCentre('${docId}', 'xlsx')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Excel (.xlsx)
+        </button>
+        <button
+          class="btn btn-secondary btn-sm doc-download-btn"
+          style="flex:1;justify-content:center;font-size:0.78rem;padding:6px 8px;"
+          data-doc="${docId}"
+          data-format="docx"
+          onclick="window.downloadDocFromCentre('${docId}', 'docx')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Word (.docx)
+        </button>
+      </div>
+    ` : `
+      <button
+        class="btn btn-primary btn-sm doc-download-btn"
+        style="width:100%;justify-content:center;margin-top:0.5rem;"
+        data-doc="${docId}"
+        onclick="window.downloadDocFromCentre('${docId}')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Document (.docx)
+      </button>
+    `;
+
     return `
       <div class="doc-card" id="card-${docId}" style="border:1px solid var(--neutral-700,#333);border-radius:8px;padding:1rem;background:var(--neutral-850,#1a1a2e);display:flex;flex-direction:column;justify-content:space-between;">
         <div>
@@ -1433,14 +1786,7 @@ function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = 
           ${note ? `<div style="font-size:0.78rem;color:var(--neutral-400,#999);margin-bottom:0.75rem;">${note}</div>` : ''}
           ${selector ? `<div style="margin-bottom:0.75rem;">${selector}</div>` : ''}
         </div>
-        <button
-          class="btn btn-primary btn-sm doc-download-btn"
-          style="width:100%;justify-content:center;margin-top:0.5rem;"
-          data-doc="${docId}"
-          onclick="window.downloadDocFromCentre('${docId}')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download Document (.docx)
-        </button>
+        ${actionBtns}
       </div>
     `;
   }
@@ -1588,12 +1934,15 @@ const DOC_ENTITY_MAP = {
   'DOC-47': () => ({ entityId: null, extra: {} }),
 };
 
-window.downloadDocFromCentre = async function(docId) {
-  const btn = document.querySelector(`[data-doc="${docId}"]`);
+window.downloadDocFromCentre = async function(docId, format = null) {
+  const btn = document.querySelector(`[data-doc="${docId}"]${format ? `[data-format="${format}"]` : ''}`) || document.querySelector(`[data-doc="${docId}"]`);
   const statusEl = document.getElementById(`status-${docId}`);
   if (!DOC_ENTITY_MAP[docId]) return;
 
   const { entityId, extra = {} } = DOC_ENTITY_MAP[docId]();
+  if (format) {
+    extra.format = format;
+  }
 
   // Validate that required entity is selected
   if (entityId !== null && entityId !== undefined && !entityId) {
@@ -1601,6 +1950,7 @@ window.downloadDocFromCentre = async function(docId) {
     return;
   }
 
+  const origHtml = btn ? btn.innerHTML : null;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating…'; }
   if (statusEl) { statusEl.textContent = 'Generating...'; statusEl.style.color = '#6C63FF'; }
 
@@ -1613,7 +1963,12 @@ window.downloadDocFromCentre = async function(docId) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download .docx`;
+      if (origHtml) {
+        btn.innerHTML = origHtml;
+      } else {
+        const isXlsx = format === 'xlsx' || (!format && docId === 'DOC-01');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download ${isXlsx ? '.xlsx' : '.docx'}`;
+      }
     }
   }
 };
