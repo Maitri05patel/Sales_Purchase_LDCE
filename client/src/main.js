@@ -1489,10 +1489,6 @@ function renderFinancialView(items = [], depts = []) {
           </h4>
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Sr. No. <span style="color: var(--red-500);">*</span></label>
-              <input type="text" id="finSrNo" class="form-control" placeholder="e.g. 17, 18, 20A" required />
-            </div>
-            <div class="form-group">
               <label class="form-label">Department <span style="color: var(--red-500);">*</span></label>
               <input list="deptList" id="finDept" class="form-control" placeholder="Select or type department" required />
               <datalist id="deptList">
@@ -1929,7 +1925,6 @@ function bindFinancialEvents(items = []) {
   document.getElementById('finForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-      sr_no: document.getElementById('finSrNo')?.value.trim() || null,
       email_address: document.getElementById('finEmail')?.value.trim() || null,
       department: document.getElementById('finDept')?.value.trim() || null,
       item_service_name: document.getElementById('finItemName')?.value.trim() || null,
@@ -2138,34 +2133,100 @@ function bindDeliveryEvents() {
 function renderRepairsView(depts, requests) {
   const formHtml = canCreate('repairs') ? `
     <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Non-Working Equipment Repair Request (FORM-12)</h3>
+      <div class="card-header" style="border-bottom: 1px solid var(--neutral-200); padding-bottom: 0.85rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+          <div>
+            <h3 class="card-title">Register New Equipment — Non-Working Repairable (FORM-12)</h3>
+            <p style="font-size:0.8rem;color:var(--neutral-500);margin-top:0.2rem;">
+              Matches <strong>L.D. College of Engineering — List of Non Working Repairable Equipment and Instruments</strong> Excel format
+            </p>
+          </div>
+          <span class="badge badge-warning">Official Register Format (10 Columns)</span>
+        </div>
       </div>
-      <form id="repairForm" class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Equipment Name</label>
-          <input type="text" id="repairName" class="form-control" required />
+      <form id="repairForm" style="padding-top:1.25rem;">
+
+        <!-- SECTION 1: Department & Equipment Identity -->
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="font-size:0.875rem;font-weight:700;color:var(--primary-800);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.75rem;border-left:3px solid var(--primary-600);padding-left:0.5rem;">
+            1. Equipment Identity (Columns A – D)
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Name of Department <span style="color:var(--red-500);">*</span></label>
+              <select id="repairDept" class="form-control" required>
+                ${depts.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name of Equipment / Instruments <span style="color:var(--red-500);">*</span></label>
+              <input type="text" id="repairName" class="form-control" placeholder="e.g. Lathe Machine, Oscilloscope, CRO" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Purchase Date <span style="color:var(--red-500);">*</span></label>
+              <input type="date" id="repairPurchaseDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cost of Purchase (Rs.) <span style="color:var(--red-500);">*</span></label>
+              <input type="number" id="repairCost" class="form-control" step="0.01" placeholder="0.00" required />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Original Cost (₹)</label>
-          <input type="number" id="repairCost" class="form-control" required />
+
+        <!-- SECTION 2: Breakdown & Non-Working Status -->
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="font-size:0.875rem;font-weight:700;color:var(--primary-800);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.75rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+            2. Breakdown & Non-Working Status (Columns E – H)
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Date Since Non Working <span style="color:var(--red-500);">*</span></label>
+              <input type="date" id="repairDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Weather Previously Repaired? <span style="color:var(--red-500);">*</span></label>
+              <select id="repairPrevRepaired" class="form-control">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+            <div class="form-group" id="grpLastRepairDate" style="display:none;">
+              <label class="form-label">If Previously Repaired — Date of Last Repair</label>
+              <input type="date" id="repairLastRepairDate" class="form-control" />
+            </div>
+            <div class="form-group" id="grpLastRepairAmount" style="display:none;">
+              <label class="form-label">Amount of Last Repair (Rs.)</label>
+              <input type="number" id="repairLastRepairAmount" class="form-control" step="0.01" placeholder="0.00" />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Date Since Non-Working</label>
-          <input type="date" id="repairDate" class="form-control" required />
+
+        <!-- SECTION 3: Current Value & Repair Estimate -->
+        <div style="margin-bottom:1.5rem;">
+          <h4 style="font-size:0.875rem;font-weight:700;color:var(--primary-800);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.75rem;border-left:3px solid var(--accent-green,#10b981);padding-left:0.5rem;">
+            3. Valuation & Repair Estimate (Columns I – J)
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Prevailing Market Value (Rs.) <span style="color:var(--red-500);">*</span></label>
+              <input type="number" id="repairMarketValue" class="form-control" step="0.01" placeholder="0.00" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Approximate Cost of Repairing (Rs.) <span style="color:var(--red-500);">*</span></label>
+              <input type="number" id="repairEst" class="form-control" step="0.01" placeholder="0.00" required />
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Detailed Fault Description <span style="color:var(--red-500);">*</span></label>
+              <textarea id="repairDesc" class="form-control" rows="3" placeholder="Describe the nature of fault, symptoms, and non-working components in detail..." required></textarea>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Estimated Repair Cost (₹)</label>
-          <input type="number" id="repairEst" class="form-control" required />
-        </div>
-        <div class="form-group full-width">
-          <label class="form-label">Detailed Fault Description</label>
-          <textarea id="repairDesc" class="form-control" required></textarea>
-        </div>
-        <div class="form-group full-width">
-          <button type="submit" class="btn btn-warning">
+
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--neutral-200);">
+          <button type="reset" class="btn btn-secondary" id="repairResetBtn">Reset Form</button>
+          <button type="submit" class="btn btn-warning" style="padding:0.65rem 1.5rem;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>
-            Submit Repair Request
+            Register in Repair Register
           </button>
         </div>
       </form>
@@ -2175,13 +2236,109 @@ function renderRepairsView(depts, requests) {
   return `
     ${renderAccessBanner('repairs')}
     ${formHtml}
+
+    <div class="card">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--neutral-200);">
+        <div>
+          <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-orange,#f59e0b);"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>
+            L.D.C.E. — List of Non Working Repairable Equipment &amp; Instruments
+          </h3>
+          <p style="font-size:0.8rem;color:var(--neutral-500);margin-top:0.2rem;">${requests.length} equipment record${requests.length !== 1 ? 's' : ''} registered</p>
+        </div>
+        <a href="#/documents" class="btn btn-secondary btn-sm">Generate DOC-44/45/46 →</a>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" style="font-size:0.82rem;">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Name of Equipment / Instruments</th>
+              <th>Purchase Date</th>
+              <th>Cost of Purchase (Rs.)</th>
+              <th>Date Since Non Working</th>
+              <th>Previously Repaired?</th>
+              <th>Date of Last Repair</th>
+              <th>Amount of Last Repair (Rs.)</th>
+              <th>Prevailing Market Value (Rs.)</th>
+              <th>Approx. Cost of Repairing (Rs.)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${requests.length === 0
+              ? `<tr><td colspan="11" style="text-align:center;padding:2.5rem;color:var(--neutral-400);">No repair requests recorded yet. Use the form above to register equipment.</td></tr>`
+              : requests.map((r, idx) => `
+              <tr>
+                <td>${r.dept_name || '-'}</td>
+                <td><strong>${r.equipment_name}</strong></td>
+                <td>${r.purchase_date ? new Date(r.purchase_date).toLocaleDateString('en-GB') : '-'}</td>
+                <td>₹${parseFloat(r.original_cost || 0).toLocaleString('en-IN')}</td>
+                <td>${r.breakdown_date ? new Date(r.breakdown_date).toLocaleDateString('en-GB') : '-'}</td>
+                <td>${r.prev_repaired ? '<span class="badge badge-warning">Yes</span>' : '<span class="badge badge-success">No</span>'}</td>
+                <td>${r.last_repair_date ? new Date(r.last_repair_date).toLocaleDateString('en-GB') : '-'}</td>
+                <td>${r.last_repair_amount ? '₹' + parseFloat(r.last_repair_amount).toLocaleString('en-IN') : '-'}</td>
+                <td>₹${parseFloat(r.market_value || 0).toLocaleString('en-IN')}</td>
+                <td><strong>₹${parseFloat(r.est_repair_cost || 0).toLocaleString('en-IN')}</strong></td>
+                <td><span class="badge badge-info">${r.status}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
   `;
 }
 
 function bindRepairsEvents() {
+  // Toggle previous repair date/amount fields
+  const prevRepairedEl = document.getElementById('repairPrevRepaired');
+  const grpDate = document.getElementById('grpLastRepairDate');
+  const grpAmt = document.getElementById('grpLastRepairAmount');
+  if (prevRepairedEl) {
+    const togglePrevFields = () => {
+      const show = prevRepairedEl.value === 'Yes';
+      if (grpDate) grpDate.style.display = show ? '' : 'none';
+      if (grpAmt) grpAmt.style.display = show ? '' : 'none';
+    };
+    togglePrevFields();
+    prevRepairedEl.addEventListener('change', togglePrevFields);
+  }
+
+  // Reset button re-toggles conditional fields
+  document.getElementById('repairResetBtn')?.addEventListener('click', () => {
+    setTimeout(() => {
+      if (grpDate) grpDate.style.display = 'none';
+      if (grpAmt) grpAmt.style.display = 'none';
+    }, 50);
+  });
+
   document.getElementById('repairForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    alert('Repair request submitted successfully (Demo)');
+    const prevRepaired = document.getElementById('repairPrevRepaired')?.value === 'Yes';
+    const payload = {
+      dept_id:            document.getElementById('repairDept')?.value,
+      equipment_name:     document.getElementById('repairName')?.value.trim(),
+      purchase_date:      document.getElementById('repairPurchaseDate')?.value,
+      original_cost:      document.getElementById('repairCost')?.value,
+      breakdown_date:     document.getElementById('repairDate')?.value,
+      prev_repaired:      prevRepaired,
+      last_repair_date:   prevRepaired ? (document.getElementById('repairLastRepairDate')?.value || null) : null,
+      last_repair_amount: prevRepaired ? (document.getElementById('repairLastRepairAmount')?.value || null) : null,
+      market_value:       document.getElementById('repairMarketValue')?.value,
+      est_repair_cost:    document.getElementById('repairEst')?.value,
+      fault_desc:         document.getElementById('repairDesc')?.value.trim(),
+      last_repair_info:   prevRepaired
+        ? `Dt: ${document.getElementById('repairLastRepairDate')?.value || '-'}, Amt: ₹${document.getElementById('repairLastRepairAmount')?.value || '0'}`
+        : ''
+    };
+    try {
+      await api.createRepair(payload);
+      alert('Equipment registered in Repair Register! Generate DOC-44/45/46 from Document Centre.');
+      router();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   });
 }
 
@@ -2195,18 +2352,18 @@ window.addEventListener('DOMContentLoaded', router);
 
 function renderTemplatesView() {
   const templates = [
-    { path: '2.Intitiating process/Check list- A while initiate process.docx', name: 'Check list A' },
-    { path: '2.Intitiating process/Format-Specifications Sheet.docx', name: 'Specifications Sheet' },
-    { path: '2.Intitiating process/Format-Terms and conditions.docx', name: 'Terms and Conditions' },
-    { path: '2.Intitiating process/General guidelines & Common ATC for bid.docx', name: 'General Guidelines & ATC' },
-    { path: '2.Intitiating process/Indent for Purchase format_Govt. Fund.docx', name: 'Purchase Indent (Govt. Fund)' },
-    { path: '2.Intitiating process/Indent for Purchase format_Non Govt. fund.docx', name: 'Purchase Indent (Non Govt. Fund)' },
-    { path: '2.Intitiating process/Note for Purchase-New Item-2026-27.docx', name: 'Note for Purchase (New Item)' },
-    { path: '2.Intitiating process/Note for Purchase-Other items.docx', name: 'Note for Purchase (Other Items)' },
-    { path: '2a. Account docs/Format-EMD-return.docx', name: 'Format - EMD Return Letter (DOC-21)' },
-    { path: '2a. Account docs/EMD letter-2025-26.docx', name: 'EMD Mail-Merge Letter (2025-26)' },
-    { path: '2a. Account docs/Notes-SD-Submission in Account.docx', name: 'Note - SD Submission in Account (DOC-22 / Gujarati)' },
-    { path: '2a. Account docs/LDCE-Bid EMD_e-PBG details-2025-26.xlsx', name: 'LDCE-Bid EMD & e-PBG Details Register (.xlsx)' },
+    { path: '2.Intitiating process/Check list- A while initiate process.docx', name: 'Check list A — Before Initiating GeM Bid', docId: 'DOC-19' },
+    { path: '2.Intitiating process/Format-Specifications Sheet.docx', name: 'Format — Specifications Sheet', docId: 'DOC-14' },
+    { path: '2.Intitiating process/Format-Terms and conditions.docx', name: 'Format — Terms and Conditions (ATC)', docId: 'DOC-15' },
+    { path: '2.Intitiating process/General guidelines & Common ATC for bid.docx', name: 'General Guidelines & Common ATC for Bid', docId: 'DOC-16' },
+    { path: '2.Intitiating process/Indent for Purchase format_Govt. Fund.docx', name: 'Purchase Indent (Govt. Fund)', docId: 'DOC-12' },
+    { path: '2.Intitiating process/Indent for Purchase format_Non Govt. fund.docx', name: 'Purchase Indent (Non Govt. Fund)', docId: 'DOC-13' },
+    { path: '2.Intitiating process/Note for Purchase-New Item-2026-27.docx', name: 'Note for Purchase — New Item (Gujarati)', docId: 'DOC-17' },
+    { path: '2.Intitiating process/Note for Purchase-Other items.docx', name: 'Note for Purchase — Other Items', docId: 'DOC-18' },
+    { path: '2a. Account docs/Format-EMD-return.docx', name: 'Format — EMD Return Letter', docId: 'DOC-21' },
+    { path: '2a. Account docs/EMD letter-2025-26.docx', name: 'EMD Mail-Merge Letter (2025-26)', docId: null },
+    { path: '2a. Account docs/Notes-SD-Submission in Account.docx', name: 'Note — SD Submission in Account (Gujarati)', docId: 'DOC-22' },
+    { path: '2a. Account docs/LDCE-Bid EMD_e-PBG details-2025-26.xlsx', name: 'LDCE-Bid EMD & e-PBG Details Register (.xlsx)', docId: null },
   ];
 
   return `
