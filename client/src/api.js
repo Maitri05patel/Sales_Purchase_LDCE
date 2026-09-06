@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api';
 
 export async function fetchApi(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -198,6 +198,19 @@ export const api = {
     return fetchApi(`/financial/instruments?${query}`);
   },
   createFinancialInstrument: (data) => fetchApi('/financial/instruments', { method: 'POST', body: data }),
+  exportFinancialExcel: async () => {
+    const res = await fetch(`${API_BASE}/financial/export-excel`);
+    if (!res.ok) throw new Error('Failed to export Excel register');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LDCE-Bid_EMD_e-PBG_details_${new Date().getFullYear()}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 
   // Scrutiny & Bids
   getBids: () => fetchApi('/scrutiny/bids'),

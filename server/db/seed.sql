@@ -52,3 +52,15 @@ INSERT INTO indents
 VALUES
 ('IND/2026-27/COMP/001', 'Govt Fund', 'State Grant (TED-5)', 4, 3, CURRENT_DATE, 'High End AI Workstation Computers', 'Intel Core i9 14th Gen, 64GB DDR5 RAM, 2TB NVMe SSD, NVIDIA RTX 4090 24GB GPU, 27 inch 4K Monitor, 3 Year Comprehensive Onsite Warranty.', 5, 150000.00, 750000.00, 'GeM Search Completed - Direct/Custom Bid Option', 'Initiated')
 ON CONFLICT (indent_no) DO NOTHING;
+
+-- 5. Sample Financial Instruments (EMD & e-PBG from LDCE Excel Register)
+INSERT INTO financial_instruments
+(sr_no, email_address, department, item_service_name, bid_order_no, bid_start_date, bid_end_date, bid_estimated_value, dd_number, dd_date, amount, bank_name, vendor_name, vendor_address, instrument_type, inward_date, remarks, amount_in_rupees, status)
+VALUES
+('17', 'bhavin.bme@ldce.ac.in', 'Biomedical engg.', 'PIC Development Board Trainer Kit', 'GEM/2025/B/6425148', '2025-07-10', '2025-07-31', 60000.00, '1396', '2025-07-25', 1800.00, 'HDFC', 'ROYAL ELECTRONICS SALES AND SERVICES', '2ND FLOOR, ROYAL HOUSE, VADODARA - 390012', 'EMD', '2025-07-29', '', 'One Thousand Eight Hundred Only', 'Held in Store'),
+('18', 'bhavin.bme@ldce.ac.in', 'Biomedical engg.', 'PIC Development Trainer Kit', 'GEM/2025/B/6425148', '2025-07-10', '2025-07-31', 60000.00, '4353', '2025-07-24', 1800.00, 'HDFC', 'Prajakta Enterprise', 'Naranpura, Ahmedabad', 'EMD', '2025-07-30', 'L1', 'One Thousand Eight Hundred Only', 'Held in Store'),
+('20', 'bhavin.bme@ldce.ac.in', 'Biomedical engg.', 'ESP32 IoT Development Trainer Kit', 'GEM/2025/B/6417109', '2025-07-10', '2025-07-31', 60000.00, '4346', '2025-07-22', 1800.00, 'HDFC', 'Vintronix', 'Ghatlodia, Ahmedabad', 'EMD', '2025-07-30', '', 'One Thousand Eight Hundred Only', 'Held in Store'),
+('23', 'vishalpatel12187@gmail.com', 'IC engg.', 'high performance power supplies (Multi Output DC Power Supply)', 'GEM/2025/B/6318877', '2025-07-08', '2025-07-29', 496000.00, '4344', '2025-07-22', 15000.00, 'HDFC', 'Vintronix', 'FF/17, Block D Nirman Complex, Nr. Shayona City, Sola Bhagvat, Ahmedabad', 'EMD', '2025-07-30', '', 'Fifteen Thousand Only', 'Held in Store'),
+('27', 'store@ldce.ac.in', 'Central Store', 'Man Power Out Sourcing-R1', 'GEM/2025/B/6428007', '2025-07-15', '2025-07-30', 7000000.00, '869226', '2025-07-25', 210000.00, 'IDFC FIRST BANK', 'YEYPLE HIRING SERVICES PVT. LTD.', '5, RUSHI APARTMENT, OPP. URDU MUNICIPLE SCHOOL, MANINAGAR, AHMEDABAD-380004', 'EMD', '2025-07-28', '1172', 'Two Lakh Ten Thousand Only', 'Held in Store')
+ON CONFLICT DO NOTHING;
+

@@ -81,9 +81,8 @@ async function fetchFinancialInstrument(id) {
   // Try to get item name from bid
   const bidRes = await db.query(`
     SELECT b.*, i.item_name FROM bids b
-    LEFT JOIN indents i ON b.indent_id = i.id
     WHERE b.bid_no = $1`, [fi.bid_order_no]);
-  fi.item_name = bidRes.rows[0]?.item_name || '';
+  fi.item_name = fi.item_service_name || bidRes.rows[0]?.item_name || '';
   return fi;
 }
 

@@ -34,7 +34,7 @@ const ROLE_PERMISSIONS = {
     cte:       'approve',
     indents:   'approve',
     notes:     'approve',
-    financial: 'view',
+    financial: 'manage',
     scrutiny:  'view',
     committee: 'approve',
     delivery:  'view',
@@ -104,7 +104,7 @@ const ROLE_PERMISSIONS = {
     cte:       'hidden',
     indents:   'hidden',
     notes:     'view',
-    financial: 'view',
+    financial: 'manage',
     scrutiny:  'hidden',
     committee: 'view',
     delivery:  'manage',
@@ -347,9 +347,12 @@ async function router() {
       appEl.innerHTML = renderAppShell(renderNotesView(indents.data), 'notes');
       bindNotesEvents();
     } else if (route === 'financial') {
-      const items = await api.getFinancialInstruments();
-      appEl.innerHTML = renderAppShell(renderFinancialView(items.data), 'financial');
-      bindFinancialEvents();
+      const [itemsRes, deptsRes] = await Promise.all([
+        api.getFinancialInstruments().catch(() => ({ data: [] })),
+        api.getDepartments().catch(() => ({ data: [] }))
+      ]);
+      appEl.innerHTML = renderAppShell(renderFinancialView(itemsRes.data || [], deptsRes.data || []), 'financial');
+      bindFinancialEvents(itemsRes.data || []);
     } else if (route === 'scrutiny') {
       const bids = await api.getBids();
       appEl.innerHTML = renderAppShell(renderScrutinyView(bids.data), 'scrutiny');
@@ -1314,47 +1317,314 @@ function bindNotesEvents() {
 // ----------------------------------------------------
 // 6. EMD & e-PBG FINANCIAL LEDGER VIEW (FORM-07)
 // ----------------------------------------------------
-function renderFinancialView(items) {
-  const formHtml = canManage('financial') ? `
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Register Vendor Financial Instrument (EMD / e-PBG D.D. Ledger)</h3>
+// ----------------------------------------------------
+// 6. EMD & e-PBG FINANCIAL LEDGER VIEW (FORM-07)
+// ----------------------------------------------------
+
+function convertNumberToWordsINR(amount) {
+  if (!amount || isNaN(amount)) return '';
+  const num = Math.floor(Math.abs(Number(amount)));
+  if (num === 0) return 'Zero Rupees Only';
+
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function convertTwoDigits(n) {
+    if (n < 20) return a[n];
+    return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+  }
+
+  function convertThreeDigits(n) {
+    let str = '';
+    if (Math.floor(n / 100) > 0) {
+      str += a[Math.floor(n / 100)] + ' Hundred';
+      if (n % 100 !== 0) str += ' ';
+    }
+    if (n % 100 !== 0) {
+      str += convertTwoDigits(n % 100);
+    }
+    return str;
+  }
+
+  const crore = Math.floor(num / 10000000);
+  const lakh = Math.floor((num % 10000000) / 100000);
+  const thousand = Math.floor((num % 100000) / 1000);
+  const remainder = num % 1000;
+
+  let result = '';
+  if (crore > 0) result += convertThreeDigits(crore) + ' Crore ';
+  if (lakh > 0) result += convertThreeDigits(lakh) + ' Lakh ';
+  if (thousand > 0) result += convertThreeDigits(thousand) + ' Thousand ';
+  if (remainder > 0) result += convertThreeDigits(remainder);
+
+  return (result.trim() ? result.trim() + ' Rupees Only' : '');
+}
+
+function renderFinTableRows(items) {
+  if (!items || items.length === 0) {
+    return `<tr><td colspan="10" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">No financial instruments recorded yet.</td></tr>`;
+  }
+  return items.map((i, idx) => {
+    const isEmd = (i.instrument_type || '').toUpperCase().includes('EMD');
+    const badgeClass = isEmd ? 'badge-info' : 'badge-purple';
+    const statusBadge = i.status === 'Deposited in Account' ? 'badge-success'
+      : i.status === 'Refunded to Vendor' ? 'badge-warning'
+      : i.status === 'Forfeited' ? 'badge-danger' : 'badge-secondary';
+
+    const ddDateStr = i.dd_date ? new Date(i.dd_date).toLocaleDateString('en-GB') : '-';
+    const inwardDateStr = i.inward_date ? new Date(i.inward_date).toLocaleDateString('en-GB') : '';
+    const bankDisplay = i.other_bank_specify ? `${i.bank_name || ''} (${i.other_bank_specify})` : (i.bank_name || '-');
+    const amountNum = parseFloat(i.amount || 0);
+
+    return `
+      <tr data-sr="${i.sr_no || ''}" data-type="${i.instrument_type || ''}" data-status="${i.status || ''}" data-search="${(String(i.sr_no || '') + ' ' + (i.bid_order_no || '') + ' ' + (i.vendor_name || '') + ' ' + (i.department || '') + ' ' + (i.item_service_name || '') + ' ' + (i.dd_number || '')).toLowerCase()}">
+        <td><strong>${i.sr_no || (idx + 1)}</strong></td>
+        <td><span class="badge ${badgeClass}">${i.instrument_type || 'EMD'}</span></td>
+        <td>
+          <div style="font-weight: 600; color: var(--primary-800);">${i.bid_order_no || '-'}</div>
+          <div style="font-size: 0.775rem; color: var(--neutral-600); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${i.item_service_name || ''}">
+            ${i.item_service_name || '-'}
+          </div>
+          ${i.bid_start_date ? `<div style="font-size: 0.7rem; color: var(--neutral-400);">Start: ${new Date(i.bid_start_date).toLocaleDateString('en-GB')}${i.bid_end_date ? ' | End: ' + new Date(i.bid_end_date).toLocaleDateString('en-GB') : ''}</div>` : ''}
+        </td>
+        <td>
+          <span style="font-size: 0.8rem; font-weight: 500;">${i.department || '-'}</span>
+          ${i.email_address ? `<div style="font-size: 0.7rem; color: var(--neutral-400);">${i.email_address}</div>` : ''}
+        </td>
+        <td>
+          <div style="font-weight: 600; color: var(--neutral-800);">${i.vendor_name || '-'}</div>
+          <div style="font-size: 0.75rem; color: var(--neutral-500); max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${i.vendor_address || ''}">
+            ${i.vendor_address || '-'}
+          </div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">No: ${i.dd_number || '-'}</div>
+          <div style="font-size: 0.75rem; color: var(--neutral-500);">Dt: ${ddDateStr}</div>
+          <div style="font-size: 0.75rem; color: var(--neutral-600);">${bankDisplay}</div>
+        </td>
+        <td>
+          <div style="font-weight: 700; color: var(--primary-700);">₹${amountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+          ${i.amount_in_rupees ? `<div style="font-size: 0.7rem; color: var(--neutral-500); font-style: italic; max-width: 180px;">${i.amount_in_rupees}</div>` : ''}
+        </td>
+        <td>
+          ${inwardDateStr ? `<div style="font-size: 0.75rem;"><strong>Inward:</strong> ${inwardDateStr}</div>` : ''}
+          ${i.remarks ? `<span class="badge badge-secondary" style="font-size: 0.7rem; margin-top: 2px;">${i.remarks}</span>` : ''}
+          ${i.remarks_2 ? `<div style="font-size: 0.7rem; color: var(--neutral-500);">${i.remarks_2}</div>` : ''}
+        </td>
+        <td><span class="badge ${statusBadge}">${i.status || 'Held in Store'}</span></td>
+        <td style="text-align: center; white-space: nowrap;">
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; align-items: stretch;">
+            <button type="button" class="btn btn-secondary btn-download-doc-emd" data-id="${i.id}" style="font-size: 0.725rem; padding: 0.35rem 0.65rem;" title="Download Official EMD Return Letter (Format-EMD-return.docx)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-600); margin-right: 2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+              EMD Return Letter
+            </button>
+            <button type="button" class="btn btn-secondary btn-download-doc-sd" data-id="${i.id}" style="font-size: 0.725rem; padding: 0.35rem 0.65rem;" title="Download Security Deposit Note Sheet to Accounts (Notes-SD-Submission in Account.docx)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-600); margin-right: 2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
+              SD Note (Accounts)
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderFinancialView(items = [], depts = []) {
+  const deptOptions = [
+    'Biomedical engg.',
+    'IC engg.',
+    'Central Store',
+    'Mechanical engg.',
+    'Civil engg.',
+    'Computer engg.',
+    'Information Technology',
+    'Electrical engg.',
+    'Chemical engg.',
+    'Textile engg.',
+    'Applied Mechanics',
+    'Science & Humanities',
+    'Hostel Section',
+    'Rubber Technology',
+    'Plastic Technology',
+    'Automobile engg.',
+    'Environment engg.'
+  ];
+  if (depts && depts.length) {
+    depts.forEach(d => {
+      if (d.name && !deptOptions.includes(d.name)) deptOptions.push(d.name);
+    });
+  }
+
+  const formHtml = canCreate('financial') || canManage('financial') ? `
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header" style="border-bottom: 1px solid var(--neutral-200); padding-bottom: 1rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; color: var(--primary-900);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-600);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>
+              Register EMD / e-PBG Financial Instrument
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--neutral-500); margin-top: 0.2rem;">
+              Complete 20-field entry matching the official LDCE Excel Register format (<code>LDCE-Bid EMD_e-PBG details-2025-26.xlsx</code>)
+            </p>
+          </div>
+          <span class="badge badge-primary">Official LDCE Register Format</span>
+        </div>
       </div>
-      <form id="finForm" class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Instrument Type</label>
-          <select id="finType" class="form-control">
-            <option value="EMD">EMD (Earnest Money Deposit)</option>
-            <option value="e-PBG / Security Deposit">e-PBG / Security Deposit</option>
-          </select>
+
+      <form id="finForm" style="padding-top: 1.25rem;">
+        <!-- SECTION 1: GeM Bid & Department Details -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="font-size: 0.875rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-left: 3px solid var(--primary-600); padding-left: 0.5rem;">
+            1. GeM Bid & Department Details
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Sr. No. <span style="color: var(--red-500);">*</span></label>
+              <input type="text" id="finSrNo" class="form-control" placeholder="e.g. 17, 18, 20A" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Department <span style="color: var(--red-500);">*</span></label>
+              <input list="deptList" id="finDept" class="form-control" placeholder="Select or type department" required />
+              <datalist id="deptList">
+                ${deptOptions.map(opt => `<option value="${opt}">`).join('')}
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address <span style="color: var(--red-500);">*</span></label>
+              <input type="email" id="finEmail" class="form-control" placeholder="e.g. bhavin.bme@ldce.ac.in" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name of Item / Service <span style="color: var(--red-500);">*</span></label>
+              <input type="text" id="finItemName" class="form-control" placeholder="e.g. PIC Development Board Trainer Kit" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bid Number <span style="color: var(--red-500);">*</span></label>
+              <input type="text" id="finBidNo" class="form-control" placeholder="e.g. GEM/2025/B/6425148" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bid Start Date</label>
+              <input type="date" id="finBidStartDate" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bid End Date</label>
+              <input type="date" id="finBidEndDate" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bid Estimated Value (₹)</label>
+              <input type="number" id="finBidEstValue" class="form-control" step="0.01" placeholder="e.g. 60000.00" />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">GeM Bid / Order No</label>
-          <input type="text" id="finBidNo" class="form-control" placeholder="e.g. GEM/2026/B/7586906" required />
+
+        <!-- SECTION 2: Details of Party with Complete Address -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="font-size: 0.875rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-left: 3px solid var(--primary-600); padding-left: 0.5rem;">
+            2. Details of Party with Complete Address
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Party / Vendor Legal Name <span style="color: var(--red-500);">*</span></label>
+              <input type="text" id="finVendor" class="form-control" placeholder="e.g. ROYAL ELECTRONICS SALES AND SERVICES" required />
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Details of Party with Complete Address <span style="color: var(--red-500);">*</span></label>
+              <textarea id="finVendorAddress" class="form-control" placeholder="e.g. 2ND FLOOR, ROYAL HOUSE, VADODARA - 390012. Ph: 9825000000" rows="2" required></textarea>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Vendor / Party Legal Name</label>
-          <input type="text" id="finVendor" class="form-control" required />
+
+        <!-- SECTION 3: Financial Instrument (EMD / e-PBG) Details -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="font-size: 0.875rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-left: 3px solid var(--primary-600); padding-left: 0.5rem;">
+            3. Financial Instrument (EMD / e-PBG D.D.) Details
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nature of Document <span style="color: var(--red-500);">*</span></label>
+              <select id="finType" class="form-control" required>
+                <option value="EMD">EMD (Earnest Money Deposit)</option>
+                <option value="e-PBG / Security Deposit">e-PBG / Security Deposit</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">EMD / e-PBG Number (D.D./PBG No) <span style="color: var(--red-500);">*</span></label>
+              <input type="text" id="finDdNo" class="form-control" placeholder="e.g. 1396" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">EMD / e-PBG Date (D.D. dt) <span style="color: var(--red-500);">*</span></label>
+              <input type="date" id="finDdDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Amount of EMD/e-PBG submitted by Party (₹) <span style="color: var(--red-500);">*</span></label>
+              <input type="number" id="finAmount" class="form-control" step="0.01" placeholder="e.g. 1800.00" required />
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Amount in Rupees (Words) <span style="font-weight: normal; color: var(--neutral-400);">(Auto-generated on amount entry, editable)</span></label>
+              <input type="text" id="finAmountWords" class="form-control" placeholder="e.g. One Thousand Eight Hundred Only" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name of Bank <span style="color: var(--red-500);">*</span></label>
+              <input list="bankList" id="finBank" class="form-control" placeholder="Select or type bank name" required />
+              <datalist id="bankList">
+                <option value="HDFC Bank">
+                <option value="State Bank of India">
+                <option value="ICICI Bank">
+                <option value="Bank of Baroda">
+                <option value="Axis Bank">
+                <option value="IDFC FIRST BANK">
+                <option value="AU Bank">
+                <option value="Kotak Mahindra Bank">
+                <option value="IDBI Bank">
+                <option value="IndusInd Bank">
+                <option value="Federal Bank">
+                <option value="Punjab National Bank">
+                <option value="Canara Bank">
+                <option value="Other">
+              </datalist>
+            </div>
+            <div class="form-group">
+              <label class="form-label">If other bank then Specify</label>
+              <input type="text" id="finOtherBank" class="form-control" placeholder="e.g. Baroda - UP Bank" />
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Demand Draft / Bank Guarantee No</label>
-          <input type="text" id="finDdNo" class="form-control" required />
+
+        <!-- SECTION 4: Inward Submission & Tracking -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="font-size: 0.875rem; font-weight: 700; color: var(--primary-800); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-left: 3px solid var(--primary-600); padding-left: 0.5rem;">
+            4. Hard Copy Submission & Remarks
+          </h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Date of Inward Original Hard Copy <span style="font-weight: normal; color: var(--neutral-400);">(EMD must be before end date)</span></label>
+              <input type="date" id="finInwardDate" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Remarks <span style="font-weight: normal; color: var(--neutral-400);">(e.g. L1, Inward No., etc.)</span></label>
+              <input type="text" id="finRemarks" class="form-control" placeholder="e.g. L1, 1172" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Remarks-2</label>
+              <input type="text" id="finRemarks2" class="form-control" placeholder="Additional tracking notes" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Ledger Status</label>
+              <select id="finStatus" class="form-control">
+                <option value="Held in Store">Held in Store</option>
+                <option value="Deposited in Account">Deposited in Account</option>
+                <option value="Refunded to Vendor">Refunded to Vendor</option>
+                <option value="Forfeited">Forfeited</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Instrument Date</label>
-          <input type="date" id="finDdDate" class="form-control" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Amount (₹)</label>
-          <input type="number" id="finAmount" class="form-control" step="0.01" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Issuing Bank & Branch</label>
-          <input type="text" id="finBank" class="form-control" placeholder="State Bank of India, Ahmedabad" required />
-        </div>
-        <div class="form-group full-width">
-          <button type="submit" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--neutral-200);">
+          <button type="reset" class="btn btn-secondary">Reset Form</button>
+          <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Record in Financial Ledger
           </button>
         </div>
@@ -1367,34 +1637,65 @@ function renderFinancialView(items) {
     ${formHtml}
 
     <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">EMD & Security Deposit Ledger Records</h3>
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--neutral-200);">
+        <div>
+          <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; color: var(--primary-900);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-600);"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            EMD & Security Deposit Ledger Records
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--neutral-500); margin-top: 0.2rem;">
+            Official LDCE Register • ${items.length} records registered
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <button id="exportExcelBtn" class="btn btn-success" title="Download official Excel Register (.xlsx)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>
+            Export Excel Register (.xlsx)
+          </button>
+        </div>
       </div>
+
+      <!-- Filter / Search Controls -->
+      <div style="display: flex; gap: 0.75rem; padding: 1rem 0; flex-wrap: wrap; align-items: center;">
+        <div style="flex: 1; min-width: 240px;">
+          <input type="text" id="finSearchInput" class="form-control" placeholder="Search by Bid No, Vendor, Department, DD No, Item..." />
+        </div>
+        <div style="min-width: 160px;">
+          <select id="finTypeFilter" class="form-control">
+            <option value="">All Document Types</option>
+            <option value="EMD">EMD Only</option>
+            <option value="e-PBG">e-PBG Only</option>
+          </select>
+        </div>
+        <div style="min-width: 160px;">
+          <select id="finStatusFilter" class="form-control">
+            <option value="">All Statuses</option>
+            <option value="Held in Store">Held in Store</option>
+            <option value="Deposited in Account">Deposited in Account</option>
+            <option value="Refunded to Vendor">Refunded to Vendor</option>
+            <option value="Forfeited">Forfeited</option>
+          </select>
+        </div>
+      </div>
+
       <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table" id="finTable">
           <thead>
             <tr>
+              <th>Sr.</th>
               <th>Type</th>
-              <th>Bid / Order No</th>
-              <th>Vendor Name</th>
-              <th>D.D. No & Date</th>
+              <th>Bid No. & Item</th>
+              <th>Department</th>
+              <th>Vendor Details</th>
+              <th>D.D. / PBG Details</th>
               <th>Amount (₹)</th>
-              <th>Bank Name</th>
+              <th>Inward Dt & Remarks</th>
               <th>Status</th>
+              <th style="text-align: center;">Official Documents</th>
             </tr>
           </thead>
-          <tbody>
-            ${items.map(i => `
-              <tr>
-                <td><span class="badge badge-info">${i.instrument_type}</span></td>
-                <td><strong>${i.bid_order_no}</strong></td>
-                <td>${i.vendor_name}</td>
-                <td>${i.dd_number} (${new Date(i.dd_date).toLocaleDateString('en-GB')})</td>
-                <td>₹${parseFloat(i.amount).toLocaleString('en-IN')}</td>
-                <td>${i.bank_name}</td>
-                <td><span class="badge badge-success">${i.status}</span></td>
-              </tr>
-            `).join('')}
+          <tbody id="finTableBody">
+            ${renderFinTableRows(items)}
           </tbody>
         </table>
       </div>
@@ -1402,18 +1703,101 @@ function renderFinancialView(items) {
   `;
 }
 
-function bindFinancialEvents() {
+function bindFinancialEvents(items = []) {
+  // Auto-convert numeric Amount to Words
+  const amountInput = document.getElementById('finAmount');
+  const wordsInput = document.getElementById('finAmountWords');
+  amountInput?.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val) && val > 0) {
+      wordsInput.value = convertNumberToWordsINR(val);
+    } else {
+      wordsInput.value = '';
+    }
+  });
+
+  // Export Excel
+  document.getElementById('exportExcelBtn')?.addEventListener('click', async () => {
+    try {
+      await api.exportFinancialExcel();
+    } catch (err) {
+      alert('Error exporting Excel register: ' + err.message);
+    }
+  });
+
+  // Document downloads per row
+  document.querySelectorAll('.btn-download-doc-emd').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      handleDownloadDoc('DOC-21', id);
+    });
+  });
+  document.querySelectorAll('.btn-download-doc-sd').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      handleDownloadDoc('DOC-22', id);
+    });
+  });
+
+  // Client-side filtering
+  const searchInput = document.getElementById('finSearchInput');
+  const typeFilter = document.getElementById('finTypeFilter');
+  const statusFilter = document.getElementById('finStatusFilter');
+
+  function applyFilters() {
+    const query = (searchInput?.value || '').toLowerCase().trim();
+    const selectedType = (typeFilter?.value || '').toLowerCase();
+    const selectedStatus = (statusFilter?.value || '').toLowerCase();
+
+    const rows = document.querySelectorAll('#finTableBody tr');
+    rows.forEach(row => {
+      const searchData = (row.getAttribute('data-search') || '').toLowerCase();
+      const rowType = (row.getAttribute('data-type') || '').toLowerCase();
+      const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+
+      const matchesSearch = !query || searchData.includes(query);
+      const matchesType = !selectedType || rowType.includes(selectedType);
+      const matchesStatus = !selectedStatus || rowStatus === selectedStatus;
+
+      if (matchesSearch && matchesType && matchesStatus) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  searchInput?.addEventListener('input', applyFilters);
+  typeFilter?.addEventListener('change', applyFilters);
+  statusFilter?.addEventListener('change', applyFilters);
+
+  // Form submission
   document.getElementById('finForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
-      instrument_type: document.getElementById('finType').value,
-      bid_order_no: document.getElementById('finBidNo').value,
-      vendor_name: document.getElementById('finVendor').value,
-      dd_number: document.getElementById('finDdNo').value,
-      dd_date: document.getElementById('finDdDate').value,
-      amount: document.getElementById('finAmount').value,
-      bank_name: document.getElementById('finBank').value
+      sr_no: document.getElementById('finSrNo')?.value.trim() || null,
+      email_address: document.getElementById('finEmail')?.value.trim() || null,
+      department: document.getElementById('finDept')?.value.trim() || null,
+      item_service_name: document.getElementById('finItemName')?.value.trim() || null,
+      bid_order_no: document.getElementById('finBidNo')?.value.trim(),
+      bid_start_date: document.getElementById('finBidStartDate')?.value || null,
+      bid_end_date: document.getElementById('finBidEndDate')?.value || null,
+      bid_estimated_value: document.getElementById('finBidEstValue')?.value || null,
+      instrument_type: document.getElementById('finType')?.value,
+      dd_number: document.getElementById('finDdNo')?.value.trim(),
+      dd_date: document.getElementById('finDdDate')?.value,
+      amount: document.getElementById('finAmount')?.value,
+      amount_in_rupees: document.getElementById('finAmountWords')?.value.trim() || null,
+      bank_name: document.getElementById('finBank')?.value.trim(),
+      other_bank_specify: document.getElementById('finOtherBank')?.value.trim() || null,
+      vendor_name: document.getElementById('finVendor')?.value.trim(),
+      vendor_address: document.getElementById('finVendorAddress')?.value.trim() || '',
+      inward_date: document.getElementById('finInwardDate')?.value || null,
+      remarks: document.getElementById('finRemarks')?.value.trim() || null,
+      remarks_2: document.getElementById('finRemarks2')?.value.trim() || null,
+      status: document.getElementById('finStatus')?.value || 'Held in Store'
     };
+
     try {
       await api.createFinancialInstrument(payload);
       alert('Financial Instrument logged in PostgreSQL ledger!');
