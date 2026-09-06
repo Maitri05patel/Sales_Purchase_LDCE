@@ -1371,7 +1371,7 @@ function convertNumberToWordsINR(amount) {
 
 function renderFinTableRows(items) {
   if (!items || items.length === 0) {
-    return `<tr><td colspan="10" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">No financial instruments recorded yet.</td></tr>`;
+    return `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">No financial instruments recorded yet.</td></tr>`;
   }
   return items.map((i, idx) => {
     const isEmd = (i.instrument_type || '').toUpperCase().includes('EMD');
@@ -1421,18 +1421,6 @@ function renderFinTableRows(items) {
           ${i.remarks_2 ? `<div style="font-size: 0.7rem; color: var(--neutral-500);">${i.remarks_2}</div>` : ''}
         </td>
         <td><span class="badge ${statusBadge}">${i.status || 'Held in Store'}</span></td>
-        <td style="text-align: center; white-space: nowrap;">
-          <div style="display: flex; flex-direction: column; gap: 0.4rem; align-items: stretch;">
-            <button type="button" class="btn btn-secondary btn-download-doc-emd" data-id="${i.id}" style="font-size: 0.725rem; padding: 0.35rem 0.65rem;" title="Download Official EMD Return Letter (Format-EMD-return.docx)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-600); margin-right: 2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-              EMD Return Letter
-            </button>
-            <button type="button" class="btn btn-secondary btn-download-doc-sd" data-id="${i.id}" style="font-size: 0.725rem; padding: 0.35rem 0.65rem;" title="Download Security Deposit Note Sheet to Accounts (Notes-SD-Submission in Account.docx)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-600); margin-right: 2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>
-              SD Note (Accounts)
-            </button>
-          </div>
-        </td>
       </tr>
     `;
   }).join('');
