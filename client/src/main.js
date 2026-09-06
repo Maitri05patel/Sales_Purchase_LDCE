@@ -1707,23 +1707,6 @@ function bindFinancialEvents(items = []) {
     }
   });
 
-  // Quick Document Generation from Top Panel
-  document.getElementById('btnQuickGenEmd')?.addEventListener('click', () => {
-    const id = document.getElementById('quickEmdSelect')?.value;
-    if (id) handleDownloadDoc('DOC-21', id);
-  });
-  document.getElementById('btnQuickGenSd')?.addEventListener('click', () => {
-    const id = document.getElementById('quickSdSelect')?.value;
-    if (id) handleDownloadDoc('DOC-22', id);
-  });
-  document.getElementById('btnExportLiveExcel')?.addEventListener('click', async () => {
-    try {
-      await api.exportFinancialExcel();
-    } catch (err) {
-      alert('Error exporting Excel register: ' + err.message);
-    }
-  });
-
   // Export Excel
   document.getElementById('exportExcelBtn')?.addEventListener('click', async () => {
     try {
@@ -1731,20 +1714,6 @@ function bindFinancialEvents(items = []) {
     } catch (err) {
       alert('Error exporting Excel register: ' + err.message);
     }
-  });
-
-  // Document downloads per row
-  document.querySelectorAll('.btn-download-doc-emd').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      handleDownloadDoc('DOC-21', id);
-    });
-  });
-  document.querySelectorAll('.btn-download-doc-sd').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = e.currentTarget.getAttribute('data-id');
-      handleDownloadDoc('DOC-22', id);
-    });
   });
 
   // Client-side filtering
