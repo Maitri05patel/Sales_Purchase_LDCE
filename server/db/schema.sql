@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS bids (
     bid_end_date DATE NOT NULL,
     bid_opening_date DATE NOT NULL,
     status VARCHAR(50) DEFAULT 'Published', -- Published, Evaluation_Phase, Finalized, Cancelled
+    scrutiny_params JSONB, -- Custom list of scrutiny parameters for this bid
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -188,10 +189,19 @@ CREATE TABLE IF NOT EXISTS scrutiny_details (
     id SERIAL PRIMARY KEY,
     bid_id INT NOT NULL REFERENCES bids(id) ON DELETE CASCADE,
     bidder_name VARCHAR(200) NOT NULL,
-    param_specs VARCHAR(20) DEFAULT 'Qualified',
-    param_turnover VARCHAR(20) DEFAULT 'Qualified',
-    param_atc VARCHAR(20) DEFAULT 'Qualified',
-    final_tech_status VARCHAR(20) NOT NULL, -- Qualified, Disqualified
+    bidder_address VARCHAR(300),
+    param_turnover VARCHAR(10) DEFAULT 'Yes',
+    param_experience VARCHAR(10) DEFAULT 'Yes',
+    param_oem VARCHAR(10) DEFAULT 'Yes',
+    param_specs VARCHAR(10) DEFAULT 'Yes',
+    param_atc VARCHAR(10) DEFAULT 'Yes',
+    param_emd VARCHAR(10) DEFAULT 'Yes',
+    param_gst VARCHAR(10) DEFAULT 'Yes',
+    param_datasheet VARCHAR(10) DEFAULT 'Yes',
+    param_warranty VARCHAR(10) DEFAULT 'Yes',
+    param_undertaking VARCHAR(10) DEFAULT 'Yes',
+    param_evaluations JSONB DEFAULT '{}', -- Key-value map of dynamic parameter -> Yes/No
+    final_tech_status VARCHAR(20) NOT NULL DEFAULT 'Qualified', -- Qualified, Disqualified
     disqualify_reason TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -210,6 +220,7 @@ CREATE TABLE IF NOT EXISTS committee_meetings (
     recommendation TEXT NOT NULL,
     attendee_ids INT[] NOT NULL,
     chk_b_verified BOOLEAN DEFAULT TRUE,
+    agenda_data JSONB, -- Custom right-hand responses for DLPC / DPC Agenda
     status VARCHAR(50) DEFAULT 'Sanctioned',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

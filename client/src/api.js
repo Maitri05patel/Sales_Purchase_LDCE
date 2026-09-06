@@ -47,16 +47,16 @@ const DOC_DEFAULT_NAMES = {
   'DOC-23': 'Bid Scrutiny Evaluation Report',
   'DOC-24': 'Reasons for Disqualification Sheet',
   'DOC-25': 'DLPC Agenda & Proposal',
+  'DOC-25A': 'GeM Agenda Format - DLPC',
   'DOC-26': 'DLPC Rate Reasonability Certificate',
   'DOC-27': 'DLPC Minutes of Meeting (MOM)',
   'DOC-28': 'Checklist B - Final Approval',
   'DOC-29': 'Note - Direct Purchase Against Bid',
   'DOC-30': 'DPC Proposal Document Index',
-  'DOC-31': 'DPC Forwarding Letter to Principal',
+  'DOC-31': 'DPC Forwarding Letter to Directorate',
   'DOC-32': 'GeM Agenda Format - DPC',
   'DOC-33': 'Institute BID Certificate',
   'DOC-34': 'L1 INFO Sheet for DPC',
-  'DOC-35': 'DPC Minutes of Meeting (MOM)',
   'DOC-36': 'Department Material Receipt Note',
   'DOC-37': 'Technical Inspection Report',
   'DOC-38': 'Pass for Payment Voucher',
@@ -202,12 +202,15 @@ export const api = {
   // Scrutiny & Bids
   getBids: () => fetchApi('/scrutiny/bids'),
   createBid: (data) => fetchApi('/scrutiny/bids', { method: 'POST', body: data }),
+  updateBidParams: (bidId, params) => fetchApi(`/scrutiny/bids/${bidId}/params`, { method: 'PUT', body: { scrutiny_params: params } }),
   getEvaluations: (bidId) => fetchApi(`/scrutiny/evaluations/${bidId}`),
   createEvaluation: (data) => fetchApi('/scrutiny/evaluations', { method: 'POST', body: data }),
+  deleteEvaluation: (id) => fetchApi(`/scrutiny/evaluations/${id}`, { method: 'DELETE' }),
 
   // Committee Meetings (DLPC/DPC)
   getMeetings: () => fetchApi('/committee/meetings'),
   createMeeting: (data) => fetchApi('/committee/meetings', { method: 'POST', body: data }),
+  updateMeetingAgenda: (meetingId, agendaData) => fetchApi(`/committee/meetings/${meetingId}/agenda`, { method: 'PUT', body: { agenda_data: agendaData } }),
 
   // Delivery & Pass for Payment
   getOrders: () => fetchApi('/delivery/orders'),
