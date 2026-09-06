@@ -10,6 +10,14 @@ window.handleDownloadDoc = async (docId, entityId) => {
   }
 };
 
+window.downloadTemplate = async (templatePath) => {
+  try {
+    await api.downloadTemplate(templatePath);
+  } catch (err) {
+    alert('Error downloading template: ' + err.message);
+  }
+};
+
 // Current User Persona State (For Faculty Review & Demo)
 let currentRole = localStorage.getItem('ldce_user_role') || 'Principal';
 
@@ -1632,8 +1640,137 @@ function renderFinancialView(items = [], depts = []) {
     </div>
   ` : '';
 
+  const accountDocsHtml = `
+    <div class="card" style="margin-bottom: 1.5rem; border-top: 4px solid var(--primary-600); box-shadow: var(--shadow-sm);">
+      <div class="card-header" style="border-bottom: 1px solid var(--neutral-200); padding-bottom: 0.85rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; color: var(--primary-900);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-600);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Account & EMD Documents (Format-Purchase-2026-27 / 2a. Account docs)
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--neutral-500); margin-top: 0.2rem;">
+              Official templates and live document generators for EMD returns, Security Deposit submissions, and Excel register
+            </p>
+          </div>
+          <span class="badge badge-primary">2a. Account docs</span>
+        </div>
+      </div>
+
+      <div style="padding: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1rem;">
+        <!-- Doc 1: Format-EMD-return.docx / DOC-21 -->
+        <div style="border: 1px solid var(--neutral-200); border-radius: var(--radius-md); padding: 1rem; background: var(--neutral-50); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+              <span class="badge badge-info">DOC-21</span>
+              <span style="font-size: 0.725rem; color: var(--neutral-500); font-weight: 500;">Word (.docx)</span>
+            </div>
+            <div style="font-weight: 700; color: var(--neutral-900); font-size: 0.95rem; margin-bottom: 0.35rem;">
+              Format - EMD Return Letter
+            </div>
+            <div style="font-size: 0.78rem; color: var(--neutral-600); margin-bottom: 0.85rem; line-height: 1.4;">
+              Official letter returning original DD to unsuccessful bidders. Strictly matches <code>Format-EMD-return.docx</code>.
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            ${items.length > 0 ? `
+              <div style="display: flex; gap: 0.4rem;">
+                <select id="quickEmdSelect" class="form-control" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">
+                  ${items.map(it => `<option value="${it.id}">#${it.sr_no || it.id} - ${it.vendor_name || ''} (₹${parseFloat(it.amount||0).toLocaleString('en-IN')})</option>`).join('')}
+                </select>
+                <button type="button" class="btn btn-primary" id="btnQuickGenEmd" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; white-space: nowrap;">
+                  Fill & Download
+                </button>
+              </div>
+            ` : ''}
+            <button type="button" class="btn btn-secondary" onclick="window.downloadTemplate('2a. Account docs/Format-EMD-return.docx')" style="font-size: 0.75rem; padding: 0.4rem;">
+              Download Blank Format (.docx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Doc 2: EMD letter-2025-26.docx -->
+        <div style="border: 1px solid var(--neutral-200); border-radius: var(--radius-md); padding: 1rem; background: var(--neutral-50); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+              <span class="badge badge-info">Mail Merge</span>
+              <span style="font-size: 0.725rem; color: var(--neutral-500); font-weight: 500;">Word (.docx)</span>
+            </div>
+            <div style="font-weight: 700; color: var(--neutral-900); font-size: 0.95rem; margin-bottom: 0.35rem;">
+              EMD Letter (2025-26)
+            </div>
+            <div style="font-size: 0.78rem; color: var(--neutral-600); margin-bottom: 0.85rem; line-height: 1.4;">
+              LDCE Mail-Merge template mapped directly with all 20 register fields. Conforms to <code>EMD letter-2025-26.docx</code>.
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="window.downloadTemplate('2a. Account docs/EMD letter-2025-26.docx')" style="font-size: 0.75rem; padding: 0.4rem;">
+              Download Template (.docx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Doc 3: Notes-SD-Submission in Account.docx / DOC-22 -->
+        <div style="border: 1px solid var(--neutral-200); border-radius: var(--radius-md); padding: 1rem; background: var(--neutral-50); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+              <span class="badge badge-success">DOC-22</span>
+              <span style="font-size: 0.725rem; color: var(--neutral-500); font-weight: 500;">Gujarati Note Sheet</span>
+            </div>
+            <div style="font-weight: 700; color: var(--neutral-900); font-size: 0.95rem; margin-bottom: 0.35rem;">
+              Note - SD Submission in Account
+            </div>
+            <div style="font-size: 0.78rem; color: var(--neutral-600); margin-bottom: 0.85rem; line-height: 1.4;">
+              Official administrative Gujarati Note Sheet to deposit e-PBG / SD in accounts. Conforms to <code>Notes-SD-Submission in Account.docx</code>.
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            ${items.length > 0 ? `
+              <div style="display: flex; gap: 0.4rem;">
+                <select id="quickSdSelect" class="form-control" style="font-size: 0.75rem; padding: 0.35rem 0.5rem;">
+                  ${items.map(it => `<option value="${it.id}">#${it.sr_no || it.id} - ${it.vendor_name || ''} (₹${parseFloat(it.amount||0).toLocaleString('en-IN')})</option>`).join('')}
+                </select>
+                <button type="button" class="btn btn-primary" id="btnQuickGenSd" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; white-space: nowrap;">
+                  Fill & Download
+                </button>
+              </div>
+            ` : ''}
+            <button type="button" class="btn btn-secondary" onclick="window.downloadTemplate('2a. Account docs/Notes-SD-Submission in Account.docx')" style="font-size: 0.75rem; padding: 0.4rem;">
+              Download Blank Note (.docx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Doc 4: LDCE-Bid EMD_e-PBG details-2025-26.xlsx -->
+        <div style="border: 1px solid var(--neutral-200); border-radius: var(--radius-md); padding: 1rem; background: var(--neutral-50); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+              <span class="badge badge-warning">Excel Register</span>
+              <span style="font-size: 0.725rem; color: var(--neutral-500); font-weight: 500;">Spreadsheet (.xlsx)</span>
+            </div>
+            <div style="font-weight: 700; color: var(--neutral-900); font-size: 0.95rem; margin-bottom: 0.35rem;">
+              LDCE EMD & e-PBG Details Register
+            </div>
+            <div style="font-size: 0.78rem; color: var(--neutral-600); margin-bottom: 0.85rem; line-height: 1.4;">
+              Complete 20-column Excel register format. Conforms to <code>LDCE-Bid EMD_e-PBG details-2025-26.xlsx</code>.
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button type="button" class="btn btn-success" id="btnExportLiveExcel" style="font-size: 0.75rem; padding: 0.4rem;">
+              Export Live Ledger Data (.xlsx)
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="window.downloadTemplate('2a. Account docs/LDCE-Bid EMD_e-PBG details-2025-26.xlsx')" style="font-size: 0.75rem; padding: 0.4rem;">
+              Download Blank Register (.xlsx)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   return `
     ${renderAccessBanner('financial')}
+    ${accountDocsHtml}
     ${formHtml}
 
     <div class="card">
@@ -1713,6 +1850,23 @@ function bindFinancialEvents(items = []) {
       wordsInput.value = convertNumberToWordsINR(val);
     } else {
       wordsInput.value = '';
+    }
+  });
+
+  // Quick Document Generation from Top Panel
+  document.getElementById('btnQuickGenEmd')?.addEventListener('click', () => {
+    const id = document.getElementById('quickEmdSelect')?.value;
+    if (id) handleDownloadDoc('DOC-21', id);
+  });
+  document.getElementById('btnQuickGenSd')?.addEventListener('click', () => {
+    const id = document.getElementById('quickSdSelect')?.value;
+    if (id) handleDownloadDoc('DOC-22', id);
+  });
+  document.getElementById('btnExportLiveExcel')?.addEventListener('click', async () => {
+    try {
+      await api.exportFinancialExcel();
+    } catch (err) {
+      alert('Error exporting Excel register: ' + err.message);
     }
   });
 
@@ -2049,6 +2203,10 @@ function renderTemplatesView() {
     { path: '2.Intitiating process/Indent for Purchase format_Non Govt. fund.docx', name: 'Purchase Indent (Non Govt. Fund)' },
     { path: '2.Intitiating process/Note for Purchase-New Item-2026-27.docx', name: 'Note for Purchase (New Item)' },
     { path: '2.Intitiating process/Note for Purchase-Other items.docx', name: 'Note for Purchase (Other Items)' },
+    { path: '2a. Account docs/Format-EMD-return.docx', name: 'Format - EMD Return Letter (DOC-21)' },
+    { path: '2a. Account docs/EMD letter-2025-26.docx', name: 'EMD Mail-Merge Letter (2025-26)' },
+    { path: '2a. Account docs/Notes-SD-Submission in Account.docx', name: 'Note - SD Submission in Account (DOC-22 / Gujarati)' },
+    { path: '2a. Account docs/LDCE-Bid EMD_e-PBG details-2025-26.xlsx', name: 'LDCE-Bid EMD & e-PBG Details Register (.xlsx)' },
   ];
 
   return `

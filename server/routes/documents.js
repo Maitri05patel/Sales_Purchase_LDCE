@@ -74,9 +74,24 @@ router.get('/template', async (req, res) => {
     if (!templatePath) {
       return res.status(400).json({ success: false, error: "'path' query parameter is required" });
     }
+    const path = require('path');
+    const fs = require('fs');
+    const filename = templatePath.replace(/\\/g, '/').split('/').pop() || 'GeneratedDocument';
+    const isXlsx = templatePath.endsWith('.xlsx');
+
+    if (isXlsx) {
+      const templatesDir = path.resolve(__dirname, '../../Format-Purchase-2026-27');
+      const absolutePath = path.resolve(templatesDir, templatePath);
+      if (!absolutePath.startsWith(templatesDir) || !fs.existsSync(absolutePath)) {
+        return res.status(404).json({ success: false, error: 'Template not found' });
+      }
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+      return res.sendFile(absolutePath);
+    }
+
     const { path: _path, ...data } = req.query;
     const buffer = await TemplateEngine.generateDocument(templatePath, data);
-    const filename = templatePath.replace(/\\/g, '/').split('/').pop() || 'GeneratedDocument.docx';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(buffer);
