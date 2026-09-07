@@ -300,19 +300,23 @@ CREATE TABLE IF NOT EXISTS payment_vouchers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 16. Non-Working Equipment & Repair Requests Table
+-- 16. Non-Working Equipment & Repair Requests Table (Matches LDCE Official Excel Register)
+-- Columns: Sr. No. | Name | Purchase Date | Cost | Date Since Non-Working | Previously Repaired? | Date of Last Repair | Amount of Last Repair | Market Value | Approx Cost of Repairing
 CREATE TABLE IF NOT EXISTS repair_requests (
     id SERIAL PRIMARY KEY,
     req_no VARCHAR(50) UNIQUE NOT NULL,
+    sr_no VARCHAR(20),                          -- Col A: Sr. No.
     dept_id INT NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
-    equipment_name VARCHAR(250) NOT NULL,
-    purchase_date DATE NOT NULL,
-    original_cost NUMERIC(14,2) NOT NULL,
-    breakdown_date DATE NOT NULL,
-    prev_repaired BOOLEAN DEFAULT FALSE,
-    last_repair_info VARCHAR(150),
-    market_value NUMERIC(14,2) NOT NULL,
-    est_repair_cost NUMERIC(14,2) NOT NULL,
+    equipment_name VARCHAR(250) NOT NULL,        -- Col B: Name of Equipment/Instruments
+    purchase_date DATE NOT NULL,                 -- Col C: Purchase Date
+    original_cost NUMERIC(14,2) NOT NULL,        -- Col D: Cost of Purchase (Rs.)
+    breakdown_date DATE NOT NULL,                -- Col E: Date Since Non Working
+    prev_repaired BOOLEAN DEFAULT FALSE,         -- Col F: Weather Previously Repaired? Yes/No
+    last_repair_date DATE,                       -- Col G: If previously repaired then date of repair
+    last_repair_amount NUMERIC(14,2),            -- Col H: Amount of last repair
+    last_repair_info VARCHAR(250),               -- Legacy combined field (date+amount text)
+    market_value NUMERIC(14,2) NOT NULL,         -- Col I: Prevailing Market Value
+    est_repair_cost NUMERIC(14,2) NOT NULL,      -- Col J: If Yes approximate cost of repairing
     fault_desc TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'Submitted for Approval',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
