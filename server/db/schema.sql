@@ -154,22 +154,49 @@ CREATE TABLE IF NOT EXISTS note_sheets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 9. EMD & Security Deposit (e-PBG) Ledger
+-- 9. EMD & Security Deposit (e-PBG) Ledger (Synced with LDCE-Bid EMD_e-PBG details)
 CREATE TABLE IF NOT EXISTS financial_instruments (
     id SERIAL PRIMARY KEY,
-    instrument_type VARCHAR(50) NOT NULL, -- EMD, e-PBG / Security Deposit
-    bid_order_no VARCHAR(100) NOT NULL,
-    vendor_name VARCHAR(200) NOT NULL,
-    vendor_address TEXT NOT NULL,
-    dd_number VARCHAR(50) NOT NULL,
-    dd_date DATE NOT NULL,
-    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
-    bank_name VARCHAR(150) NOT NULL,
+    sr_no VARCHAR(50), -- Sr.No (e.g. 17, 18, 20A)
+    email_address VARCHAR(150), -- Email Address
+    department VARCHAR(150), -- Department (e.g. Biomedical engg., IC engg., Central Store)
+    item_service_name VARCHAR(250), -- Name of Item/ Service
+    bid_order_no VARCHAR(100) NOT NULL, -- Bid Number
+    bid_start_date DATE, -- Bid Start Date
+    bid_end_date DATE, -- Bid End Date
+    bid_estimated_value NUMERIC(14,2), -- Bid Estimated Value
+    dd_number VARCHAR(50) NOT NULL, -- EMD / e-PBG number
+    dd_date DATE NOT NULL, -- EMD/e-PBG dt
+    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0), -- Amount of EMD/ e-PBG submitted by the Party
+    bank_name VARCHAR(150) NOT NULL, -- Name of Bank
+    other_bank_specify VARCHAR(150), -- If other bank then Specify
+    vendor_name VARCHAR(200) NOT NULL, -- Party Name
+    vendor_address TEXT NOT NULL, -- Details of Party with Complete Address
+    instrument_type VARCHAR(50) NOT NULL DEFAULT 'EMD', -- Nature of document (EMD, e-PBG / Security Deposit)
+    inward_date DATE, -- Date of inward Original Hard Copy (before bid end date)
+    remarks TEXT, -- Remarks (e.g. L1, 1172, etc.)
+    amount_in_rupees VARCHAR(250), -- Amount in Rupees
+    remarks_2 TEXT, -- Remarks-2
     status VARCHAR(50) DEFAULT 'Held in Store', -- Held in Store, Deposited in Account, Refunded to Vendor, Forfeited
     refund_ref VARCHAR(100),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Timestamp
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migration safety for existing installations
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS sr_no VARCHAR(50);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS email_address VARCHAR(150);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS department VARCHAR(150);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS item_service_name VARCHAR(250);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS bid_start_date DATE;
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS bid_end_date DATE;
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS bid_estimated_value NUMERIC(14,2);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS other_bank_specify VARCHAR(150);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS inward_date DATE;
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS remarks TEXT;
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS amount_in_rupees VARCHAR(250);
+ALTER TABLE financial_instruments ADD COLUMN IF NOT EXISTS remarks_2 TEXT;
+
 
 -- 10. Bids Master Table
 CREATE TABLE IF NOT EXISTS bids (
