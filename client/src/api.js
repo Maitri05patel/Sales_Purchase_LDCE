@@ -72,9 +72,23 @@ const DOC_DEFAULT_NAMES = {
 };
 
 export async function downloadDocument(docId, entityId, extraParams = {}) {
-  const params = new URLSearchParams({ ...(entityId ? { entityId } : {}), ...extraParams }).toString();
-  const url = `${API_BASE}/documents/${docId}${params ? '?' + params : ''}`;
-  const response = await fetch(url);
+  const hasComplexData = Object.values(extraParams).some(v => typeof v === 'object' && v !== null);
+  let response;
+
+  if (hasComplexData || extraParams._usePost) {
+    const { _usePost, ...postData } = extraParams;
+    const body = { ...(entityId ? { entityId } : {}), ...postData };
+    response = await fetch(`${API_BASE}/documents/${docId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } else {
+    const params = new URLSearchParams({ ...(entityId ? { entityId } : {}), ...extraParams }).toString();
+    const url = `${API_BASE}/documents/${docId}${params ? '?' + params : ''}`;
+    response = await fetch(url);
+  }
+
   if (!response.ok) {
     let errorMessage = 'Failed to generate document';
     try {
@@ -114,6 +128,55 @@ export async function downloadDocument(docId, entityId, extraParams = {}) {
     filename = `${baseName}${suffix}.${ext}`;
   }
   
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function downloadDocumentPost(docId, payload = {}) {
+  const url = `${API_BASE}/documents/${docId}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    let errorMessage = 'Failed to generate document';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorMessage;
+    } catch(e) {}
+    throw new Error(errorMessage);
+  }
+
+  // Extract filename from Content-Disposition header if present
+  let filename = '';
+  const disposition = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+  if (disposition) {
+    const matchUtf8 = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (matchUtf8 && matchUtf8[1]) {
+      try {
+        filename = decodeURIComponent(matchUtf8[1].trim());
+      } catch (e) {}
+    }
+    if (!filename) {
+      const match = disposition.match(/filename=["']?([^"';]+)["']?/i);
+      if (match && match[1]) filename = match[1].trim();
+    }
+  }
+
+  if (!filename) {
+    const ext = payload.format === 'xlsx' ? 'xlsx' : 'docx';
+    const baseName = DOC_DEFAULT_NAMES[docId] || `Document_${docId}`;
+    filename = `${baseName}.${ext}`;
+  }
+
   const blob = await response.blob();
   const downloadUrl = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -168,6 +231,7 @@ export async function downloadTemplate(templatePath) {
 
 export const api = {
   downloadDocument,
+  downloadDocumentPost,
   downloadTemplate,
   // Masters
   getDepartments: () => fetchApi('/masters/departments'),
@@ -235,9 +299,7 @@ export const api = {
   getRepairs: () => fetchApi('/repairs/requests'),
   createRepair: (data) => fetchApi('/repairs/requests', { method: 'POST', body: data }),
 
-  // Documents
-  getDocumentCatalog: () => fetchApi('/documents'),
-
   // Dashboard
   getDashboardMetrics: () => fetchApi('/dashboard/metrics'),
 };
+

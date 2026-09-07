@@ -485,7 +485,7 @@ class DocumentGenerator {
       }
       case 'DOC-45': {
         const repair = await fetchRepair(id);
-        return DOCRepairApprovalNote.generate(repair || {});
+        return DOCRepairApprovalNote.generate({ ...repair, ...extra });
       }
       case 'DOC-46': {
         const repair = await fetchRepair(id);

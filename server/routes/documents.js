@@ -152,13 +152,13 @@ const DOC_FILE_NAMES = {
 };
 
 /**
- * GET /api/documents/:docId
- * Generates and downloads the specified document.
+ * Helper to generate document buffer and send as attachment
  */
-router.get('/:docId', async (req, res) => {
+async function handleDocDownload(req, res) {
   try {
     const { docId } = req.params;
-    const { entityId, format, ...extra } = req.query;
+    const data = req.method === 'POST' ? req.body : req.query;
+    const { entityId, format, ...extra } = data;
 
     const isExcel = format === 'xlsx' || (!format && (docId === 'DOC-01' || docId === 'DOC-02' || docId === 'DOC-03' || docId === 'DOC-04' || docId === 'DOC-05' || docId === 'DOC-06' || docId === 'DOC-07'));
     const targetFormat = isExcel ? 'xlsx' : 'docx';
@@ -184,7 +184,10 @@ router.get('/:docId', async (req, res) => {
     console.error(`Document Generation Error [${req.params.docId}]:`, error);
     res.status(500).json({ success: false, error: 'Failed to generate document: ' + error.message });
   }
-});
+}
+
+router.get('/:docId', handleDocDownload);
+router.post('/:docId', handleDocDownload);
 
 module.exports = router;
 

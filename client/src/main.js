@@ -1,6 +1,15 @@
 import { api } from './api.js';
 import { Chart, registerables } from 'chart.js';
+import ldceLogoImg from './assets/ldce_logo.png';
+import gandhiLogoImg from './assets/gandhi_150_logo.png';
 Chart.register(...registerables);
+
+let activeRepairsTab = 'register';
+let activePassForPaymentType = 'non_gem';
+let activePoType = 'purchase_order';
+let poFormItems = [
+  { item_name: '', unit_rate: '', qty: '', total_amount: '' }
+];
 
 window.handleDownloadDoc = async (docId, entityId, extra = {}) => {
   try {
@@ -12,21 +21,87 @@ window.handleDownloadDoc = async (docId, entityId, extra = {}) => {
 
 function numToGujaratiWords(amount) {
   const num = Math.round(parseFloat(amount || 0));
-  if (num === 0) return 'શૂન્ય';
+  if (num === 0) return 'શૂન્ય રૂપિયા પુરા';
 
-  const crore = Math.floor(num / 10000000);
-  const lakh = Math.floor((num % 10000000) / 100000);
-  const thousand = Math.floor((num % 100000) / 1000);
-  const hundred = Math.floor((num % 1000) / 100);
-  const rem = num % 100;
+  const ones = [
+    '', 'એક', 'બે', 'ત્રણ', 'ચાર', 'પાંચ', 'છ', 'સાત', 'આઠ', 'નવ', 'દસ',
+    'અગિયાર', 'બાર', 'તેર', 'ચૌદ', 'પંદર', 'સોળ', 'સત્તર', 'અઢાર', 'ઓગણીસ', 'વીસ',
+    'એકવીસ', 'બાવીસ', 'તેવીસ', 'ચોવીસ', 'પચ્ચીસ', 'છવીસ', 'સત્તાવીસ', 'અઠ્ઠાવીસ', 'ઓગણત્રીસ', 'ત્રીસ',
+    'એકત્રીસ', 'બત્રીસ', 'તેત્રીસ', 'ચોત્રીસ', 'પાંત્રીસ', 'છત્રીસ', 'સાડત્રીસ', 'ઓગણચાલીસ', 'ચાલીસ',
+    'એકતાલીસ', 'બેતાલીસ', 'તેતાલીસ', 'ચુમ્માલીસ', 'પિસ્તાલીસ', 'છેતાલીસ', 'સુડતાલીસ', 'અડતાલીસ', 'ઓગણપચાસ', 'પચાસ',
+    'એકાવન', 'બાવન', 'ત્રેપન', 'ચોપન', 'પંચાવન', 'છપ્પન', 'સત્તાવન', 'અઠ્ઠાવન', 'ઓગણસાઠ', 'સાઠ',
+    'એકસઠ', 'બાસઠ', 'ત્રેસઠ', 'ચોસઠ', 'પાંસઠ', 'છાસઠ', 'સડસઠ', 'અડસઠ', 'ઓગણસિત્તેર', 'સિત્તેર',
+    'એકોતેર', 'બોતેર', 'તોતેર', 'ચોતેર', 'પંચોતેર', 'છોતેર', 'સંતોતેર', 'ઇઠોતેર', 'ઓગણાએંસી', 'એંસી',
+    'એક્યાસી', 'બ્યાસી', 'ત્યાસી', 'ચોર્યાસી', 'પંચાસી', 'છ્યાસી', 'સિત્યાસી', 'અઠ્યાસી', 'નેવ્યાસી', 'નેવું',
+    'એકાણું', 'બાણું', 'ત્રાણું', 'ચોરાણું', 'પંચાણું', 'છન્નું', 'સત્તાણું', 'અઠ્ઠાણું', 'નવાણું'
+  ];
+
+  function twoDigits(n) {
+    if (n < 100) return ones[n] || '';
+    return '';
+  }
+
+  let n = num;
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  const hundred = Math.floor(n / 100);
+  const rem = n % 100;
 
   const parts = [];
-  if (crore > 0) parts.push(`${crore} કરોડ`);
-  if (lakh > 0) parts.push(`${lakh} લાખ`);
-  if (thousand > 0) parts.push(`${thousand} હજાર`);
-  if (hundred > 0) parts.push(`${hundred} સો`);
-  if (rem > 0) parts.push(`${rem}`);
-  return parts.join(' ');
+  if (crore > 0) parts.push(`${twoDigits(crore)} કરોડ`);
+  if (lakh > 0) parts.push(`${twoDigits(lakh)} લાખ`);
+  if (thousand > 0) parts.push(`${twoDigits(thousand)} હજાર`);
+  if (hundred > 0) parts.push(`${hundred === 1 ? 'એકસો' : (ones[hundred] + ' સો')}`);
+  if (rem > 0) parts.push(`${twoDigits(rem)}`);
+  return (parts.join(' ') + ' રૂપિયા પુરા').trim();
+}
+
+function numToEnglishWords(amount) {
+  const num = Math.round(parseFloat(amount || 0));
+  if (num === 0) return 'Rupees Zero Only';
+
+  const ones = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function convertGroup(n) {
+    let str = '';
+    if (n >= 100) {
+      str += ones[Math.floor(n / 100)] + ' Hundred ';
+      n %= 100;
+    }
+    if (n >= 20) {
+      str += tens[Math.floor(n / 10)] + ' ';
+      n %= 10;
+    }
+    if (n > 0) {
+      str += ones[n] + ' ';
+    }
+    return str.trim();
+  }
+
+  let n = num;
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  const remainder = n;
+
+  let parts = [];
+  if (crore > 0) parts.push(`${convertGroup(crore)} Crore`);
+  if (lakh > 0) parts.push(`${convertGroup(lakh)} Lakh`);
+  if (thousand > 0) parts.push(`${convertGroup(thousand)} Thousand`);
+  if (remainder > 0) parts.push(convertGroup(remainder));
+
+  return `Rupees ${parts.join(' ')} Only`;
 }
 
 window.downloadTemplate = async (templatePath) => {
@@ -57,99 +132,99 @@ const ROLES = [
 const ROLE_PERMISSIONS = {
   Principal: {
     dashboard: 'view',
-    masters:   'view',
-    cte:       'approve',
-    indents:   'approve',
-    notes:     'approve',
+    masters: 'view',
+    cte: 'approve',
+    indents: 'approve',
+    notes: 'approve',
     financial: 'manage',
-    scrutiny:  'view',
+    scrutiny: 'view',
     committee: 'approve',
-    delivery:  'view',
-    repairs:   'view',
+    delivery: 'view',
+    repairs: 'view',
     templates: 'view',
     documents: 'view',
   },
   StoreOfficer: {
     dashboard: 'view',
-    masters:   'manage',
-    cte:       'view',
-    indents:   'create',
-    notes:     'create',
+    masters: 'manage',
+    cte: 'view',
+    indents: 'create',
+    notes: 'create',
     financial: 'manage',
-    scrutiny:  'create',
+    scrutiny: 'create',
     committee: 'create',
-    delivery:  'manage',
-    repairs:   'manage',
+    delivery: 'manage',
+    repairs: 'manage',
     templates: 'view',
     documents: 'manage',
   },
   HOD: {
     dashboard: 'view',
-    masters:   'create',
-    cte:       'create',
-    indents:   'create',
-    notes:     'approve',
+    masters: 'create',
+    cte: 'create',
+    indents: 'create',
+    notes: 'approve',
     financial: 'hidden',
-    scrutiny:  'approve',
+    scrutiny: 'approve',
     committee: 'view',
-    delivery:  'approve',
-    repairs:   'hidden',
+    delivery: 'approve',
+    repairs: 'hidden',
     templates: 'view',
     documents: 'view',
   },
   DeptRep: {
     dashboard: 'view',
-    masters:   'view',
-    cte:       'create',
-    indents:   'create',
-    notes:     'create',
+    masters: 'view',
+    cte: 'create',
+    indents: 'create',
+    notes: 'create',
     financial: 'hidden',
-    scrutiny:  'view',
+    scrutiny: 'view',
     committee: 'hidden',
-    delivery:  'create',
-    repairs:   'hidden',
+    delivery: 'create',
+    repairs: 'hidden',
     templates: 'view',
     documents: 'view',
   },
   ExpertMember: {
     dashboard: 'hidden',
-    masters:   'view',
-    cte:       'view',
-    indents:   'create',
-    notes:     'hidden',
+    masters: 'view',
+    cte: 'view',
+    indents: 'create',
+    notes: 'hidden',
     financial: 'hidden',
-    scrutiny:  'create',
+    scrutiny: 'create',
     committee: 'view',
-    delivery:  'create',
-    repairs:   'hidden',
+    delivery: 'create',
+    repairs: 'hidden',
     templates: 'view',
     documents: 'view',
   },
   AccountsOfficer: {
     dashboard: 'view',
-    masters:   'view',
-    cte:       'hidden',
-    indents:   'hidden',
-    notes:     'view',
+    masters: 'view',
+    cte: 'hidden',
+    indents: 'hidden',
+    notes: 'view',
     financial: 'manage',
-    scrutiny:  'hidden',
+    scrutiny: 'hidden',
     committee: 'view',
-    delivery:  'manage',
-    repairs:   'hidden',
+    delivery: 'manage',
+    repairs: 'hidden',
     templates: 'view',
     documents: 'view',
   },
   DLPCMember: {
     dashboard: 'view',
-    masters:   'hidden',
-    cte:       'hidden',
-    indents:   'hidden',
-    notes:     'hidden',
+    masters: 'hidden',
+    cte: 'hidden',
+    indents: 'hidden',
+    notes: 'hidden',
     financial: 'hidden',
-    scrutiny:  'view',
+    scrutiny: 'view',
     committee: 'approve',
-    delivery:  'hidden',
-    repairs:   'hidden',
+    delivery: 'hidden',
+    repairs: 'hidden',
     templates: 'view',
     documents: 'view',
   }
@@ -180,11 +255,11 @@ function canManage(route) {
 
 function getAccessLabel(route) {
   const labels = {
-    hidden:  'No Access',
-    view:    'Read Only',
-    create:  'Create & Submit',
+    hidden: 'No Access',
+    view: 'Read Only',
+    create: 'Create & Submit',
     approve: 'Review & Approve',
-    manage:  'Full Access'
+    manage: 'Full Access'
   };
   return labels[getAccessLevel(route)] || 'No Access';
 }
@@ -232,29 +307,39 @@ function renderAccessDenied() {
 
 // Nav Items Data (route, label, icon SVG, section)
 const NAV_ITEMS = [
-  { section: 'Overview', items: [
-    { route: 'dashboard', label: 'Dashboard', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
-    { route: 'masters', label: 'Departments', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/></svg>' },
-  ]},
-  { section: 'Procurement', items: [
-    { route: 'cte', label: 'CTE Demands', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 13H8"/><path d="M16 17H8"/><path d="M16 13h-2"/></svg>' },
-    { route: 'indents', label: 'Purchase Indents', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>' },
-    { route: 'notes', label: 'Note Sheets', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>' },
-    { route: 'financial', label: 'EMD & e-PBG Ledger', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>' },
-  ]},
-  { section: 'Evaluation', items: [
-    { route: 'scrutiny', label: 'Technical Scrutiny', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' },
-    { route: 'committee', label: 'DLPC / DPC Sanctions', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-  ]},
-  { section: 'Post-Order', items: [
-    { route: 'delivery', label: 'Inspection & Vouchers', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>' },
-    { route: 'repairs', label: 'Equipment Repairs', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>' },
-  ]},
+  {
+    section: 'Overview', items: [
+      { route: 'dashboard', label: 'Dashboard', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+      { route: 'masters', label: 'Departments', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/></svg>' },
+    ]
+  },
+  {
+    section: 'Procurement', items: [
+      { route: 'cte', label: 'CTE Demands', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 13H8"/><path d="M16 17H8"/><path d="M16 13h-2"/></svg>' },
+      { route: 'indents', label: 'Purchase Indents', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>' },
+      { route: 'notes', label: 'Note Sheets', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>' },
+      { route: 'financial', label: 'EMD & e-PBG Ledger', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>' },
+    ]
+  },
+  {
+    section: 'Evaluation', items: [
+      { route: 'scrutiny', label: 'Technical Scrutiny', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' },
+      { route: 'committee', label: 'DLPC / DPC Sanctions', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+    ]
+  },
+  {
+    section: 'Post-Order', items: [
+      { route: 'delivery', label: 'Inspection & Vouchers', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>' },
+      { route: 'repairs', label: 'Equipment Repairs', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>' },
+    ]
+  },
 
-  { section: 'Documents', items: [
-    { route: 'documents', label: 'Document Centre', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>' },
-    { route: 'templates', label: 'Raw Templates', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
-  ]},
+  {
+    section: 'Documents', items: [
+      { route: 'documents', label: 'Document Centre', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>' },
+      { route: 'templates', label: 'Raw Templates', icon: '<svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' },
+    ]
+  },
 ];
 
 function renderSidebarNav(activeRoute) {
@@ -321,18 +406,18 @@ function formatRoleName(role) {
 
 function getRouteTitle(route) {
   const titles = {
-    dashboard:  'Executive Dashboard',
-    masters:    'Departments & Governance',
-    cte:        'Annual CTE Demand Entry',
-    indents:    'Purchase Indents & Specifications',
-    notes:      'Gujarati Administrative Note Sheets',
-    financial:  'EMD & Security Deposit Ledger',
-    scrutiny:   'Technical Scrutiny Matrix',
-    committee:  'DLPC / DPC Sanctions',
-    delivery:   'Inspection & Payment Vouchers',
-    repairs:    'Equipment Repair Requests',
-    documents:  'Document Centre — All 47 Documents',
-    templates:  'Raw Document Templates'
+    dashboard: 'Executive Dashboard',
+    masters: 'Departments & Governance',
+    cte: 'Annual CTE Demand Entry',
+    indents: 'Purchase Indents & Specifications',
+    notes: 'Gujarati Administrative Note Sheets',
+    financial: 'EMD & Security Deposit Ledger',
+    scrutiny: 'Technical Scrutiny Matrix',
+    committee: 'DLPC / DPC Sanctions',
+    delivery: 'Inspection & Payment Vouchers',
+    repairs: 'Equipment Repair Requests',
+    documents: 'Document Centre — All 47 Documents',
+    templates: 'Raw Document Templates'
   };
   return titles[route] || 'Store & Purchase Management System';
 }
@@ -390,7 +475,7 @@ async function router() {
         try {
           const evalRes = await api.getEvaluations(selectedBidId);
           evaluations = evalRes.data || [];
-        } catch (_) {}
+        } catch (_) { }
       }
       appEl.innerHTML = renderAppShell(renderScrutinyView(bids, evaluations, selectedBidId), 'scrutiny');
       bindScrutinyEvents(bids);
@@ -435,10 +520,24 @@ async function router() {
       );
       bindDocumentsEvents();
     } else if (route === 'repairs') {
+      const urlParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+      const paramTab = urlParams.get('tab') || window._targetRepairsTab || null;
+      const paramRepairId = urlParams.get('repairId') || null;
+      window._targetRepairsTab = null;
+      if (paramTab) {
+        activeRepairsTab = paramTab;
+      }
+      if (paramRepairId) {
+        if (paramTab === 'doc43') window._selectedRepairForDoc43 = paramRepairId;
+        if (paramTab === 'doc45') window._selectedRepairForDoc45 = paramRepairId;
+        if (paramTab === 'doc46') window._selectedRepairForDoc46 = paramRepairId;
+        if (paramTab === 'doc47') window._selectedRepairForDoc47 = paramRepairId;
+        if (paramTab === 'inquiry') window._selectedRepairForInquiry = paramRepairId;
+      }
       const depts = await api.getDepartments();
       const requests = await api.getRepairs();
       appEl.innerHTML = renderAppShell(renderRepairsView(depts.data, requests.data), 'repairs');
-      bindRepairsEvents();
+      bindRepairsEvents(depts.data, requests.data);
     }
   } catch (err) {
     appEl.innerHTML = renderAppShell(`<div class="card"><h3 style="color:var(--accent-red)">Error loading view: ${err.message}</h3></div>`, route);
@@ -933,14 +1032,14 @@ function bindCteEvents() {
     try {
       const saved = localStorage.getItem('ldce_it_items_master');
       if (saved) return JSON.parse(saved);
-    } catch (e) {}
+    } catch (e) { }
     return [...DEFAULT_IT_ITEMS];
   }
 
   function saveITItemsMaster(items) {
     try {
       localStorage.setItem('ldce_it_items_master', JSON.stringify(items));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function populateITSelect(selectedVal = '') {
@@ -1376,7 +1475,7 @@ function convertNumberToWordsINR(amount) {
   const num = Math.floor(Math.abs(Number(amount)));
   if (num === 0) return 'Zero Rupees Only';
 
-  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
@@ -1420,7 +1519,7 @@ function renderFinTableRows(items) {
     const badgeClass = isEmd ? 'badge-info' : 'badge-purple';
     const statusBadge = i.status === 'Deposited in Account' ? 'badge-success'
       : i.status === 'Refunded to Vendor' ? 'badge-warning'
-      : i.status === 'Forfeited' ? 'badge-danger' : 'badge-secondary';
+        : i.status === 'Forfeited' ? 'badge-danger' : 'badge-secondary';
 
     const ddDateStr = i.dd_date ? new Date(i.dd_date).toLocaleDateString('en-GB') : '-';
     const inwardDateStr = i.inward_date ? new Date(i.inward_date).toLocaleDateString('en-GB') : '';
@@ -1851,7 +1950,7 @@ function getBidScrutinyParams(bid) {
     try {
       const parsed = JSON.parse(bid.scrutiny_params);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch (_) {}
+    } catch (_) { }
   }
   return DEFAULT_SCRUTINY_PARAMS;
 }
@@ -2026,18 +2125,18 @@ function renderScrutinyView(bids, evaluations = [], selectedBidId = null) {
                 </td>
               </tr>
             ` : evaluations.map((e, idx) => {
-              let dynMap = e.param_evaluations;
-              if (typeof dynMap === 'string') {
-                try { dynMap = JSON.parse(dynMap); } catch (_) {}
-              }
-              const hasDyn = dynMap && Object.keys(dynMap).length > 0;
-              const entries = hasDyn ? Object.entries(dynMap) : [
-                ['Turnover', e.param_turnover || 'Yes'],
-                ['Specs', e.param_specs || 'Yes'],
-                ['ATC', e.param_atc || 'Yes']
-              ];
+    let dynMap = e.param_evaluations;
+    if (typeof dynMap === 'string') {
+      try { dynMap = JSON.parse(dynMap); } catch (_) { }
+    }
+    const hasDyn = dynMap && Object.keys(dynMap).length > 0;
+    const entries = hasDyn ? Object.entries(dynMap) : [
+      ['Turnover', e.param_turnover || 'Yes'],
+      ['Specs', e.param_specs || 'Yes'],
+      ['ATC', e.param_atc || 'Yes']
+    ];
 
-              return `
+    return `
                 <tr>
                   <td><strong>${idx + 1}</strong></td>
                   <td>
@@ -2066,7 +2165,7 @@ function renderScrutinyView(bids, evaluations = [], selectedBidId = null) {
                   </td>
                 </tr>
               `;
-            }).join('')}
+  }).join('')}
           </tbody>
         </table>
       </div>
@@ -2283,18 +2382,18 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
   const currentMeeting = meetings.find(m => String(m.id) === String(selectedMeetingId)) || meetings[0] || null;
   const activeMeetingId = currentMeeting ? currentMeeting.id : '';
   const isDPC = currentMeeting?.committee_type === 'DPC';
-  
+
   if (activeDocId) {
     activeCommitteeDocTab = activeDocId;
-  } else if (isDPC && !['DOC-30','DOC-31','DOC-32','DOC-33','DOC-34'].includes(activeCommitteeDocTab)) {
+  } else if (isDPC && !['DOC-30', 'DOC-31', 'DOC-32', 'DOC-33', 'DOC-34'].includes(activeCommitteeDocTab)) {
     activeCommitteeDocTab = 'DOC-30';
-  } else if (!isDPC && !['DOC-25','DOC-25A','DOC-26','DOC-27','DOC-28','DOC-29'].includes(activeCommitteeDocTab)) {
+  } else if (!isDPC && !['DOC-25', 'DOC-25A', 'DOC-26', 'DOC-27', 'DOC-28', 'DOC-29'].includes(activeCommitteeDocTab)) {
     activeCommitteeDocTab = 'DOC-25';
   }
 
   let agenda = currentMeeting?.agenda_data || {};
   if (typeof agenda === 'string') {
-    try { agenda = JSON.parse(agenda); } catch (_) {}
+    try { agenda = JSON.parse(agenda); } catch (_) { }
   }
 
   // Pre-fill fallbacks
@@ -2467,8 +2566,8 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
         </div>
         <div style="padding:1rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:0.85rem;">
           ${currentDocs.map(doc => {
-            const isActive = activeCommitteeDocTab === doc.id;
-            return `
+    const isActive = activeCommitteeDocTab === doc.id;
+    return `
               <div class="doc-package-card" style="border:1.5px solid ${isActive ? 'var(--accent-primary, #6366F1)' : 'var(--border-color)'}; background:${isActive ? 'rgba(99,102,241,0.04)' : 'var(--bg-primary)'}; padding:0.9rem; border-radius:8px; display:flex; flex-direction:column; justify-content:space-between; gap:0.6rem; transition:all 0.2s ease;">
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; margin-bottom:0.35rem;">
@@ -2488,7 +2587,7 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
                 </div>
               </div>
             `;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
 
@@ -2542,14 +2641,14 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
                   </thead>
                   <tbody>
                     ${[
-                      { sr: '1', title: 'સંસ્થા કક્ષાએ આંતરીક કિમટીની રચના અંગેનો કચેરી આદેશ', page: '1-1' },
-                      { sr: '2', title: 'બીડને લગતી શરતો / સ્પેશિફીકેશન (કોરીજડમની વિગતો જો લાગુ પડતી હોય તો)', page: '5-17' },
-                      { sr: '3', title: 'બીડ ડોક્યુમેન્ટ', page: '19-25' },
-                      { sr: '4', title: 'ટેકનીકલ ઈવેલ્યુએશનની વિગતો', page: '27-101' },
-                      { sr: '5', title: 'ફાયનાન્સિયલ ઈવેલ્યુએશનની વિગતો', page: '103-111' },
-                      { sr: '6', title: 'જો કોઈ બીડરને અમાન્ય કરેલ હોઈ તો અમાન્ય કરવાના કારણોની વિગતો', page: '113-113' },
-                      { sr: '7', title: 'GeM મારફત ખરીદી માટે ખરીદ સિમિત સમક્ષ રજુ કરવાની એજન્ડા નોંધ', page: '115-115' }
-                    ].map(row => `
+          { sr: '1', title: 'સંસ્થા કક્ષાએ આંતરીક કિમટીની રચના અંગેનો કચેરી આદેશ', page: '1-1' },
+          { sr: '2', title: 'બીડને લગતી શરતો / સ્પેશિફીકેશન (કોરીજડમની વિગતો જો લાગુ પડતી હોય તો)', page: '5-17' },
+          { sr: '3', title: 'બીડ ડોક્યુમેન્ટ', page: '19-25' },
+          { sr: '4', title: 'ટેકનીકલ ઈવેલ્યુએશનની વિગતો', page: '27-101' },
+          { sr: '5', title: 'ફાયનાન્સિયલ ઈવેલ્યુએશનની વિગતો', page: '103-111' },
+          { sr: '6', title: 'જો કોઈ બીડરને અમાન્ય કરેલ હોઈ તો અમાન્ય કરવાના કારણોની વિગતો', page: '113-113' },
+          { sr: '7', title: 'GeM મારફત ખરીદી માટે ખરીદ સિમિત સમક્ષ રજુ કરવાની એજન્ડા નોંધ', page: '115-115' }
+        ].map(row => `
                       <tr style="border-bottom:1px solid #334155;">
                         <td style="padding:0.75rem; text-align:center; border-right:1px solid #334155; font-weight:500;">${row.sr}</td>
                         <td style="padding:0.75rem; border-right:1px solid #334155; font-family:'Shruti', 'Gujarati Sangam MN', sans-serif;">${row.title}</td>
@@ -2834,24 +2933,24 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
                 <table style="width:100%; border-collapse:collapse; border:1px solid #94a3b8; font-size:0.9rem; margin-bottom:2rem;">
                   <tbody>
                     ${[
-                      '1. Sanction on Note (Admin Approval for Purchase)',
-                      '2. Grant Order along with details of allocation of Grant of current FY under relevant Major Head',
-                      '3. Copy of Purchase Indent Sheet with Spec.',
-                      '4. Copy of Published Bid with Terms and conditions',
-                      '5. Copy of Bid Extension (if any)',
-                      '6. List of participant Bidders',
-                      '7. Minutes of Meeting of primary scrutiny committee (Technical Evaluation)',
-                      '8. Technical Scrutiny (Primary) with compliance statement & relevant documents of Bidders',
-                      '9. Details of MSE / MII benefits provided to L1 / Any Bidders (if any)',
-                      '10. Clarification (Representation / Challenge) submitted by Bidders & Remarks of Department',
-                      '11. Reason for rejection of technically disqualified bidders & copy of representation / rejection reply',
-                      '12. Minutes of Meeting of Final Scrutiny Committee',
-                      '13. Final Technical Scrutiny report with compliance statement & technical approval',
-                      '14. Financial comparison sheet / L1 details from GeM (Before / After RA)',
-                      '15. Financial statement of all qualified bidders',
-                      '16. Certificate for reasonability of rate by competent authority (DOC-26)',
-                      '17. DLPC / DPC Sanction Agenda & Minutes of Meeting (DOC-25 / DOC-27)'
-                    ].map((item, idx) => `
+          '1. Sanction on Note (Admin Approval for Purchase)',
+          '2. Grant Order along with details of allocation of Grant of current FY under relevant Major Head',
+          '3. Copy of Purchase Indent Sheet with Spec.',
+          '4. Copy of Published Bid with Terms and conditions',
+          '5. Copy of Bid Extension (if any)',
+          '6. List of participant Bidders',
+          '7. Minutes of Meeting of primary scrutiny committee (Technical Evaluation)',
+          '8. Technical Scrutiny (Primary) with compliance statement & relevant documents of Bidders',
+          '9. Details of MSE / MII benefits provided to L1 / Any Bidders (if any)',
+          '10. Clarification (Representation / Challenge) submitted by Bidders & Remarks of Department',
+          '11. Reason for rejection of technically disqualified bidders & copy of representation / rejection reply',
+          '12. Minutes of Meeting of Final Scrutiny Committee',
+          '13. Final Technical Scrutiny report with compliance statement & technical approval',
+          '14. Financial comparison sheet / L1 details from GeM (Before / After RA)',
+          '15. Financial statement of all qualified bidders',
+          '16. Certificate for reasonability of rate by competent authority (DOC-26)',
+          '17. DLPC / DPC Sanction Agenda & Minutes of Meeting (DOC-25 / DOC-27)'
+        ].map((item, idx) => `
                       <tr style="border-bottom:1px solid #94a3b8; background:${idx % 2 === 1 ? '#f8fafc' : '#fff'};">
                         <td style="padding:0.55rem 0.85rem; border-right:1px solid #94a3b8;">${item}</td>
                         <td style="width:20%; padding:0.55rem 0.85rem; text-align:center; font-weight:600; color:#16a34a;">[ ✔ Attached ]</td>
@@ -4220,8 +4319,8 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
                 </div>
                 <div style="padding:1rem; display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:0.6rem;">
                   ${checklistItems.map((item, idx) => {
-                    const isChecked = agenda[`chk_${idx + 1}`] ?? true;
-                    return `
+          const isChecked = agenda[`chk_${idx + 1}`] ?? true;
+          return `
                       <div style="display:flex; align-items:flex-start; gap:0.5rem; background:var(--bg-primary); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
                         <input type="checkbox" id="ag_chk_${idx + 1}" class="agenda-chk" data-idx="${idx + 1}" ${isChecked ? 'checked' : ''} style="margin-top:0.2rem; cursor:pointer;" />
                         <label for="ag_chk_${idx + 1}" style="font-size:0.82rem; cursor:pointer; line-height:1.35;">
@@ -4229,7 +4328,7 @@ function renderCommitteeView(meetings = [], indents = [], bids = [], selectedMee
                         </label>
                       </div>
                     `;
-                  }).join('')}
+        }).join('')}
                 </div>
               </div>
 
@@ -4575,7 +4674,7 @@ function renderDeliveryView(orders = [], vouchers = [], depts = []) {
   const initialUnit = selectedOrder?.unit_price || (initialQty > 0 ? (initialTotal / initialQty) : 14180);
 
   const orderOpts = orders.length
-    ? orders.map(o => `<option value="${o.id}">#${o.id} – ${o.order_no || 'PO'} | ${(o.item_name || '').substring(0,35)} [₹${parseFloat(o.total_value || o.total_cost || 0).toLocaleString('en-IN')}]</option>`).join('')
+    ? orders.map(o => `<option value="${o.id}">#${o.id} – ${o.order_no || 'PO'} | ${(o.item_name || '').substring(0, 35)} [₹${parseFloat(o.total_value || o.total_cost || 0).toLocaleString('en-IN')}]</option>`).join('')
     : '<option value="">— No Purchase Orders Found —</option>';
 
   const deptListDatalist = `
@@ -5174,17 +5273,17 @@ function renderDeliveryView(orders = [], vouchers = [], depts = []) {
               <table style="width:100%; font-size:0.85rem; border-collapse:collapse; margin-bottom:1rem;">
                 <tbody>
                   ${[
-                    'Pass for payment form with sign and stamp',
-                    'Copy of form approved by DLPC/DPC/SDPC/SPC',
-                    'Copy of note approved by the Principal',
-                    'GeM Invoice sign & Stamp of HOD',
-                    'Seller payment details generated from GeM',
-                    'CRAC with sign & Stamp of HOD',
-                    'Contract Order with sign & Stamp of HOD',
-                    'Inspection report',
-                    'Additional documents if any',
-                    'Approved file separately (As per check list – A & B)'
-                  ].map((item, i) => `
+        'Pass for payment form with sign and stamp',
+        'Copy of form approved by DLPC/DPC/SDPC/SPC',
+        'Copy of note approved by the Principal',
+        'GeM Invoice sign & Stamp of HOD',
+        'Seller payment details generated from GeM',
+        'CRAC with sign & Stamp of HOD',
+        'Contract Order with sign & Stamp of HOD',
+        'Inspection report',
+        'Additional documents if any',
+        'Approved file separately (As per check list – A & B)'
+      ].map((item, i) => `
                     <tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
                       <td style="padding:0.4rem 0.5rem; line-height:1.4;">${i + 1}. ${item}</td>
                       <td style="padding:0.4rem 0.5rem; text-align:center; width:35px;">
@@ -5228,15 +5327,15 @@ function renderDeliveryView(orders = [], vouchers = [], depts = []) {
               <table style="width:100%; font-size:0.85rem; border-collapse:collapse; margin-bottom:1rem;">
                 <tbody>
                   ${[
-                    'Pass for payment form with sign and stamp',
-                    'Copy of form approved by DLPC/DPC/SDPC/SPC',
-                    'Copy of note approved by the Principal',
-                    'GeM Invoice with sign & Stamp of HOD',
-                    'Seller payment details generated from GeM',
-                    'CRAC with sign & Stamp of HOD',
-                    'Contract Order with sign & Stamp of HOD',
-                    'Inspection report'
-                  ].map((item, i) => `
+        'Pass for payment form with sign and stamp',
+        'Copy of form approved by DLPC/DPC/SDPC/SPC',
+        'Copy of note approved by the Principal',
+        'GeM Invoice with sign & Stamp of HOD',
+        'Seller payment details generated from GeM',
+        'CRAC with sign & Stamp of HOD',
+        'Contract Order with sign & Stamp of HOD',
+        'Inspection report'
+      ].map((item, i) => `
                     <tr style="border-bottom:1px solid rgba(0,0,0,0.05);">
                       <td style="padding:0.4rem 0.5rem; line-height:1.4;">${i + 1}. ${item}</td>
                       <td style="padding:0.4rem 0.5rem; text-align:center; width:35px;">
@@ -5544,9 +5643,1479 @@ function bindDeliveryEvents(orders = [], vouchers = [], depts = []) {
 }
 
 // ----------------------------------------------------
-// 10. REPAIRS & NON-WORKING EQUIPMENT (FORM-12)
+// 10. REPAIRS & NON-WORKING EQUIPMENT (FORM-12), INQUIRY LETTER (DOC-41) & COMPARATIVE STATEMENT (DOC-42)
 // ----------------------------------------------------
+let inquiryFormItems = [
+  { item_name: '', qty: '', remarks: '' }
+];
+
+let compFundType = 'Govt Fund';
+let compVendors = [
+  { name: 'AKSH Services', address: "1-Anand Bhavan, Abadnagar Bopal, A'bad", rate: '2500.00', tax: '450.00', other: '0.00', total: '2950.00', tc: 'Payment within 30 days' },
+  { name: 'FAST Services', address: "I-2, GF-Kumkum Residency B/h Satyam Hospital, Chandkheda A'bad", rate: '2800.00', tax: '504.00', other: '0.00', total: '3304.00', tc: '1 Year Warranty' },
+  { name: 'KARAN Enterprise', address: "C-10 Appts, Central jail road, Subhashbridge, A'bad", rate: '3100.00', tax: '558.00', other: '0.00', total: '3658.00', tc: 'Doorstep service' }
+];
+let compItems = [
+  { item_name: 'CAMC of Canon IR 2002 Copier machine', qty: '01 No.', remarks: '' }
+];
+
 function renderRepairsView(depts, requests) {
+  // Navigation Tabs
+  const navTabs = `
+    <div style="display:flex;gap:0.5rem;border-bottom:2px solid var(--neutral-700,#333);margin-bottom:1.5rem;padding-bottom:0.25rem;flex-wrap:wrap;">
+      <button type="button" class="btn ${activeRepairsTab === 'register' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsRegister" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>
+        <span>Equipment Repair Register (FORM-12)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'inquiry' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsInquiry" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>✉️ Official Inquiry Letter (DOC-41)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'comp' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsComp" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span>📊 Comparative Statement (DOC-42)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'doc43' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsDoc43" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <span>📜</span>
+        <span>PO &amp; Work Order (DOC-43)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'doc45' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsDoc45" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <span>📝</span>
+        <span>Note for Approval (DOC-45)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'doc46' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsDoc46" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <span>📋</span>
+        <span>Note for WO (DOC-46)</span>
+      </button>
+      <button type="button" class="btn ${activeRepairsTab === 'doc47' ? 'btn-primary' : 'btn-secondary'}" id="tabBtnRepairsDoc47" style="border-radius:6px 6px 0 0;padding:0.6rem 1.1rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">
+        <span>💳</span>
+        <span>Pass for Payment (DOC-47)</span>
+      </button>
+    </div>
+  `;
+
+  // COMPARATIVE STATEMENT (DOC-42) TAB
+  if (activeRepairsTab === 'comp') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(380px, 500px) 1fr;gap:1.5rem;align-items:start;" class="comp-grid-layout">
+        
+        <!-- LEFT: Comparative Statement Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>📊</span> Comparative Statement
+              </h3>
+              <span class="badge badge-primary">Official DOC-42</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Compare vendor quotations with statutory HOD certificate &amp; 7-member purchase committee signatures.
+            </p>
+          </div>
+
+          <form id="compStatementForm" style="padding-top:1rem;">
+            
+            <!-- Fund Selection (Govt vs Non-Govt) -->
+            <div style="background:var(--neutral-850,#1a1a2e);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1.5px solid var(--primary-500,#6366f1);">
+              <label class="form-label" style="font-size:0.82rem;font-weight:700;color:var(--primary-300,#a5b4fc);margin-bottom:0.5rem;display:block;">
+                🏛️ SELECT FUND CATEGORY (Sets Committee Members)
+              </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${compFundType === 'Govt Fund' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="comp_fund_radio" value="Govt Fund" ${compFundType === 'Govt Fund' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Govt Fund</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">Mamtora &amp; Khasiya roster</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${compFundType === 'Non-Govt Fund' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="comp_fund_radio" value="Non-Govt Fund" ${compFundType === 'Non-Govt Fund' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Non-Govt Fund</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">Thakkar &amp; Sanghvi roster</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Quick Pre-fills -->
+            <div style="background:var(--neutral-800,#222);padding:0.75rem;border-radius:6px;margin-bottom:1.25rem;border:1px dashed var(--neutral-600,#444);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                <label class="form-label" style="font-size:0.78rem;color:var(--accent-orange,#f59e0b);font-weight:700;margin:0;">⚡ Quick Load Examples</label>
+                <button type="button" class="btn btn-xs btn-outline-warning" id="btnLoadCanonExample" style="font-size:0.72rem;padding:2px 8px;">Load Canon CAMC Example</button>
+              </div>
+              <select id="comp_autofill_eq" class="form-control" style="font-size:0.82rem;">
+                <option value="">— Or select registered equipment to populate —</option>
+                ${requests.map(r => `<option value="${r.id}">#${r.id} – ${r.equipment_name} (${r.dept_name || 'Dept'})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- SECTION 1: Statement Meta -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-primary,#6366f1);padding-left:0.5rem;">
+                1. Inquiry &amp; Reference Details
+              </h4>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Comparative Statement For <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="comp_statement_for" class="form-control" value="CAMC of Canon IR 2002 Copier machine" placeholder="e.g. CAMC of Canon IR 2002 Copier machine" required />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Inquiry No. <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="comp_inq_no" class="form-control" value="LDCE/store/CAMC-Canon/2019-20/337" placeholder="e.g. LDCE/store/CAMC-Canon/2019-20/337" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Inquiry Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="comp_inq_date" class="form-control" value="2020-01-31" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Date of Receipt <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="comp_last_date" class="form-control" value="2020-06-12" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Date of Opening (Optional)</label>
+                  <input type="date" id="comp_opening_date" class="form-control" />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: Item Description -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-green,#10b981);padding-left:0.5rem;">
+                2. Item &amp; Quantity
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 100px;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Description of Item <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="comp_item_desc" class="form-control" value="CAMC of Canon IR 2002 Copier machine" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Qty. <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="comp_item_qty" class="form-control" value="01 No." required />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: 3 Vendors & Rates -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                3. Vendor Quotations &amp; Rates (All in Rs.)
+              </h4>
+              <div id="compVendorsFormContainer" style="display:flex;flex-direction:column;gap:0.75rem;">
+                <!-- Vendor 1, 2, 3 cards injected here -->
+              </div>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;padding-top:1rem;border-top:1px solid var(--neutral-700,#444);">
+              <button type="button" class="btn btn-secondary" id="compResetBtn" style="flex:1;">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btnDownloadCompDoc" style="flex:2;font-weight:700;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Official DOC-42 (.docx)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Official Document Preview -->
+        <div class="card" style="background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:1.75rem 1.5rem;position:sticky;top:1rem;font-family:'Times New Roman',Times,serif;overflow-x:auto;">
+          
+          <div style="font-size:0.75rem;color:#6b7280;text-align:right;margin-bottom:0.5rem;font-family:sans-serif;font-weight:600;">
+            LIVE DOCUMENT PREVIEW (<span id="prev_comp_fund_badge" style="color:#2563eb;">GOVT FUND</span>)
+          </div>
+
+          <!-- Document Header -->
+          <div style="text-align:center;font-weight:700;font-size:1.18rem;margin-bottom:4px;color:#000;">
+            L. D. College of Engineering, Ahmedabad–380015.
+          </div>
+          <div style="text-align:center;font-size:1.02rem;margin-bottom:12px;color:#000;">
+            Comparative statement for<span id="prev_comp_statement_for">CAMC of Canon IR 2002 Copier machine</span>
+          </div>
+
+          <!-- Metadata Row -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:0.92rem;margin-bottom:12px;color:#000;line-height:1.4;">
+            <div>
+              <span>Inq No :</span> <span id="prev_comp_inq_no" style="background:#fef08a;padding:0 2px;">LDCE/store/CAMC-Canon/2019-20/337</span>
+              <span>Dated:</span> <span id="prev_comp_inq_date" style="background:#fef08a;padding:0 2px;">31/01/2020</span>
+            </div>
+            <div style="text-align:right;">
+              <div>Last date of receipt: <span id="prev_comp_last_date" style="background:#fef08a;padding:0 2px;">12/06/2020</span></div>
+              <div>Date of opening: <span id="prev_comp_opening_date"></span></div>
+            </div>
+          </div>
+
+          <!-- Comparative Table (7 columns) -->
+          <table style="width:100%;border-collapse:collapse;font-size:0.86rem;color:#000;border:1.5px solid #000;margin-bottom:16px;">
+            <thead>
+              <tr style="border:1px solid #000;text-align:center;">
+                <th rowspan="2" style="border:1px solid #000;padding:4px 3px;width:5%;">Sr.<br/>No</th>
+                <th rowspan="2" style="border:1px solid #000;padding:4px 6px;width:24%;">Description of Item</th>
+                <th rowspan="2" style="border:1px solid #000;padding:4px 3px;width:8%;">Qty.</th>
+                <th colspan="3" style="border:1px solid #000;padding:4px;width:54%;text-align:center;">All rates are in Rupees</th>
+                <th rowspan="2" style="border:1px solid #000;padding:4px 4px;width:9%;">Remarks</th>
+              </tr>
+              <tr id="prev_comp_vendor_headers" style="border:1px solid #000;font-size:0.8rem;text-align:center;">
+                <!-- Vendor subheaders injected here -->
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Item Row 1 -->
+              <tr style="min-height:50px;">
+                <td style="border:1px solid #000;padding:6px 3px;text-align:center;">1</td>
+                <td id="prev_comp_row_desc" style="border:1px solid #000;padding:6px;">CAMC of Canon IR 2002 Copier machine</td>
+                <td id="prev_comp_row_qty" style="border:1px solid #000;padding:6px 3px;text-align:center;">01 No.</td>
+                <td id="prev_comp_v1_rate" style="border:1px solid #000;padding:6px;text-align:center;">2,500.00</td>
+                <td id="prev_comp_v2_rate" style="border:1px solid #000;padding:6px;text-align:center;">2,800.00</td>
+                <td id="prev_comp_v3_rate" style="border:1px solid #000;padding:6px;text-align:center;">3,100.00</td>
+                <td id="prev_comp_row_remarks" style="border:1px solid #000;padding:6px;text-align:center;"></td>
+              </tr>
+              <!-- Govt Tax -->
+              <tr>
+                <td colspan="2" style="border:1px solid #000;padding:4px 6px;">Govt. Tax</td>
+                <td style="border:1px solid #000;"></td>
+                <td id="prev_comp_v1_tax" style="border:1px solid #000;padding:4px;text-align:center;">450.00</td>
+                <td id="prev_comp_v2_tax" style="border:1px solid #000;padding:4px;text-align:center;">504.00</td>
+                <td id="prev_comp_v3_tax" style="border:1px solid #000;padding:4px;text-align:center;">558.00</td>
+                <td style="border:1px solid #000;"></td>
+              </tr>
+              <!-- Other charges -->
+              <tr>
+                <td colspan="2" style="border:1px solid #000;padding:4px 6px;">Other charges</td>
+                <td style="border:1px solid #000;"></td>
+                <td id="prev_comp_v1_other" style="border:1px solid #000;padding:4px;text-align:center;">0.00</td>
+                <td id="prev_comp_v2_other" style="border:1px solid #000;padding:4px;text-align:center;">0.00</td>
+                <td id="prev_comp_v3_other" style="border:1px solid #000;padding:4px;text-align:center;">0.00</td>
+                <td style="border:1px solid #000;"></td>
+              </tr>
+              <!-- Grand total -->
+              <tr style="font-weight:700;">
+                <td colspan="2" style="border:1px solid #000;padding:4px 6px;">Grand total</td>
+                <td style="border:1px solid #000;"></td>
+                <td id="prev_comp_v1_total" style="border:1px solid #000;padding:4px;text-align:center;font-weight:700;">2,950.00</td>
+                <td id="prev_comp_v2_total" style="border:1px solid #000;padding:4px;text-align:center;font-weight:700;">3,304.00</td>
+                <td id="prev_comp_v3_total" style="border:1px solid #000;padding:4px;text-align:center;font-weight:700;">3,658.00</td>
+                <td style="border:1px solid #000;"></td>
+              </tr>
+              <!-- Terms & Condition -->
+              <tr>
+                <td colspan="2" style="border:1px solid #000;padding:4px 6px;font-weight:700;line-height:1.2;">
+                  Terms &amp; Condition<br/>(Party wise if any)
+                </td>
+                <td style="border:1px solid #000;"></td>
+                <td id="prev_comp_v1_tc" style="border:1px solid #000;padding:4px;text-align:center;font-size:0.75rem;">Payment within 30 days</td>
+                <td id="prev_comp_v2_tc" style="border:1px solid #000;padding:4px;text-align:center;font-size:0.75rem;">1 Year Warranty</td>
+                <td id="prev_comp_v3_tc" style="border:1px solid #000;padding:4px;text-align:center;font-size:0.75rem;">Doorstep service</td>
+                <td style="border:1px solid #000;"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Prepared By & Checked By -->
+          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:0.92rem;margin:16px 0 12px 0;">
+            <div>Prepared By:</div>
+            <div>Checked By: 1)</div>
+            <div>2)</div>
+          </div>
+
+          <!-- Certificate by HOD -->
+          <div style="font-size:0.88rem;line-height:1.35;margin-bottom:14px;">
+            <div style="font-weight:700;margin-bottom:3px;">Certificate by Head of Department:</div>
+            <p style="text-indent:2rem;margin:0 0 8px 0;text-align:justify;">
+              The lowest rate quoted by the party for the above items, which are encircled by the red ink and initialed by the undersigned are lowest price quoted for the items and these items are as per specifications mentioned in said inquiry. Hence it is hereby recommended to purchase item(s) from the respective party. It is also certified that lowest price quoted by the party for the above items are found reasonable as per the current market survey.
+            </p>
+            <div style="font-weight:700;margin-top:6px;">Head of the department</div>
+          </div>
+
+          <!-- Committee Members Heading -->
+          <div style="font-weight:700;font-size:0.92rem;margin-bottom:6px;">
+            Committee Members:
+          </div>
+
+          <!-- Dynamic 7-Box Committee Members Table -->
+          <table style="width:100%;border-collapse:collapse;font-size:0.82rem;color:#000;border:1.5px solid #000;margin-bottom:14px;text-align:center;">
+            <tbody>
+              <tr id="prev_comp_committee_row" style="height:55px;vertical-align:bottom;">
+                <!-- 7 member cells injected here -->
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Page Footer -->
+          <div style="text-align:center;font-size:0.82rem;color:#4b5563;margin-top:10px;">
+            01 of 01
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  if (activeRepairsTab === 'inquiry') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(360px, 480px) 1fr;gap:1.5rem;align-items:start;" class="inquiry-grid-layout">
+        
+        <!-- LEFT: Inquiry Letter Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>✉️</span> Generate Inquiry Letter
+              </h3>
+              <span class="badge badge-primary">Official DOC-41</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Fill details below to generate the official quotation invitation document for local purchase or equipment repairs.
+            </p>
+          </div>
+
+          <form id="inquiryLetterForm" style="padding-top:1rem;">
+            
+            <!-- Quick Pre-fill -->
+            <div style="background:var(--neutral-800,#222);padding:0.75rem;border-radius:6px;margin-bottom:1rem;border:1px dashed var(--neutral-600,#444);">
+              <label class="form-label" style="font-size:0.78rem;color:var(--accent-primary,#6366f1);font-weight:700;">⚡ Quick Pre-Fill From Registered Equipment</label>
+              <select id="inq_autofill_eq" class="form-control" style="font-size:0.82rem;">
+                <option value="">— Select registered equipment to auto-fill —</option>
+                ${requests.map(r => `<option value="${r.id}">#${r.id} – ${r.equipment_name} (${r.dept_name || 'Dept'})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- SECTION 1: Reference & Header Meta -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-primary,#6366f1);padding-left:0.5rem;">
+                1. Reference & Department Details
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Department <span style="color:var(--red-500);">*</span></label>
+                  <select id="inq_dept" class="form-control" required>
+                    ${depts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Financial Year <span style="color:var(--red-500);">*</span></label>
+                  <select id="inq_fin_year" class="form-control" required>
+                    <option value="2026-27">2026-27</option>
+                    <option value="2025-26">2025-26</option>
+                    <option value="2024-25">2024-25</option>
+                    <option value="2023-24">2023-24</option>
+                    <option value="2022-23">2022-23</option>
+                    <option value="2021-22">2021-22</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Inquiry No. / Suffix</label>
+                  <input type="text" id="inq_ref_no" class="form-control" placeholder="e.g. 104 or leave blank" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Letter Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="inq_date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: To Vendor / Recipient Details -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                2. Addressee / Vendor Details (Optional)
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Vendor / Firm Name</label>
+                  <input type="text" id="inq_vendor_name" class="form-control" placeholder="Leave blank for M/s _____________________" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Vendor Address</label>
+                  <input type="text" id="inq_vendor_address" class="form-control" placeholder="Leave blank for Address: _________________" />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: Subject & Quotation Items -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-green,#10b981);padding-left:0.5rem;">
+                3. Subject & Items Required
+              </h4>
+              <div class="form-group" style="margin-bottom:0.75rem;">
+                <label class="form-label">Subject: Quotation for <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="inq_subject" class="form-control" value="stationary items for library" placeholder="e.g. stationary items for library, repair of Lathe Machine" required />
+              </div>
+
+              <!-- Dynamic Items Table -->
+              <div style="margin-top:0.75rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                  <label class="form-label" style="margin:0;font-weight:700;">Quotation Items List</label>
+                  <button type="button" class="btn btn-sm btn-secondary" id="btnAddInquiryItem" style="font-size:0.75rem;padding:3px 8px;">+ Add Item Row</button>
+                </div>
+                <div id="inquiryItemsContainer" style="display:flex;flex-direction:column;gap:0.5rem;">
+                  <!-- Dynamic Item Rows Injected Here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: Conditions & Submission Deadlines -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-blue,#06b6d4);padding-left:0.5rem;">
+                4. Conditions &amp; Submission Deadline
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">1. Superscribed Envelope Text</label>
+                  <input type="text" id="inq_superscribed" class="form-control" value="Quotation for stationary items for library" placeholder="e.g. Quotation for stationary items for library" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">2. Last Date for Receiving Quotations <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="inq_last_date" class="form-control" required />
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:0.75rem;padding-top:1rem;border-top:1px solid var(--neutral-700,#444);">
+              <button type="button" class="btn btn-secondary" id="inquiryResetBtn" style="flex:1;">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btnDownloadInquiryDoc" style="flex:2;font-weight:700;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Official .docx
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Official Letterhead Preview Card -->
+        <div class="card" style="background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:1.75rem 2rem;position:sticky;top:1rem;">
+          
+          <div style="font-size:0.75rem;color:#6b7280;text-align:right;margin-bottom:0.5rem;font-family:sans-serif;font-weight:600;">
+            LIVE DOCUMENT PREVIEW (OFFICIAL FORMAT)
+          </div>
+
+          <!-- Letterhead Header (3 columns) -->
+          <div style="display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:0.5rem;text-align:center;">
+            <!-- Left Logo -->
+            <div style="text-align:center;">
+              <img src="${ldceLogoImg}" alt="LDCE Logo" style="width:70px;height:60px;object-fit:contain;display:block;margin:0 auto;" />
+              <div style="color:#C0392B;font-weight:700;font-size:0.82rem;font-family:'Times New Roman',serif;margin-top:2px;">L.D.C.E</div>
+            </div>
+
+            <!-- Center Heading -->
+            <div>
+              <div style="color:#C0392B;font-size:0.95rem;font-family:Georgia,serif;line-height:1.2;">Government of Gujarat</div>
+              <div style="color:#C0392B;font-weight:700;font-size:1.18rem;font-family:Georgia,serif;line-height:1.2;margin:2px 0;">L. D. College of Engineering, Ahmedabad</div>
+              <div style="color:#204A87;font-size:0.8rem;font-family:Verdana,sans-serif;line-height:1.2;">Opp. Gujarat University, Navrangpura</div>
+              <div style="color:#204A87;font-size:0.8rem;font-family:Verdana,sans-serif;line-height:1.2;">Ahmedabad - 380 015</div>
+              <div style="color:#204A87;font-size:0.72rem;font-family:Verdana,sans-serif;line-height:1.2;margin-top:2px;">Phone : Office - 079 26306752, Principal - 079 26302887</div>
+              <div style="color:#204A87;font-size:0.72rem;font-family:Verdana,sans-serif;line-height:1.2;">Email : ldce-abad-dte@gujarat.gov.in &nbsp; Website : www.ldce.ac.in</div>
+            </div>
+
+            <!-- Right Gandhi 150 Logo -->
+            <div style="text-align:center;">
+              <img src="${gandhiLogoImg}" alt="150 Years of Mahatma" style="width:85px;height:65px;object-fit:contain;display:block;margin:0 auto;" />
+            </div>
+          </div>
+
+          <!-- Red Line Below Header -->
+          <div style="height:2px;background:#C0392B;margin:8px 0 12px 0;"></div>
+
+          <!-- Reference & Date Line -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-family:'Times New Roman',serif;font-size:0.95rem;margin-bottom:8px;">
+            <div>
+              No. LDCE/Purchase/<span id="prev_ref_dept_fin" style="color:#C0392B;font-weight:700;">Library/2021-22/</span><span id="prev_ref_inq_no" style="font-weight:700;"></span>
+            </div>
+            <div>
+              Dated: <span id="prev_date_display">  /  /2021</span>
+            </div>
+          </div>
+
+          <!-- Confidential -->
+          <div style="text-align:center;font-weight:700;text-decoration:underline;font-family:'Times New Roman',serif;font-size:1.05rem;margin:10px 0 6px 0;">
+            Confidential
+          </div>
+
+          <!-- To Section -->
+          <div style="font-family:'Times New Roman',serif;font-size:0.95rem;margin-bottom:8px;">
+            <div style="font-weight:700;text-decoration:underline;">To,</div>
+            <div id="prev_vendor_details" style="min-height:22px;color:#374151;margin-top:2px;"></div>
+          </div>
+
+          <!-- Subject Line -->
+          <div style="font-family:'Times New Roman',serif;font-size:0.95rem;margin-bottom:8px;">
+            <strong>Sub:</strong> Quotation for <span id="prev_sub_display" style="color:#204A87;text-decoration:underline;">stationary items for library</span>.
+          </div>
+
+          <!-- Body Text -->
+          <div style="font-family:'Times New Roman',serif;font-size:0.95rem;margin-bottom:10px;">
+            We are pleased to invite quotations for the following items.
+          </div>
+
+          <!-- Table of Items -->
+          <div style="margin-bottom:12px;">
+            <table style="width:100%;border-collapse:collapse;font-family:'Times New Roman',serif;font-size:0.88rem;color:#000;">
+              <thead>
+                <tr style="border:1.5px solid #000;">
+                  <th style="border:1px solid #000;padding:4px 6px;text-align:center;width:10%;text-decoration:underline;">Sr.No.</th>
+                  <th style="border:1px solid #000;padding:4px 8px;text-align:left;width:55%;">Description of Item</th>
+                  <th style="border:1px solid #000;padding:4px 6px;text-align:center;width:15%;">Qty</th>
+                  <th style="border:1px solid #000;padding:4px 8px;text-align:left;width:20%;">Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="prev_items_tbody">
+                <!-- Live Preview Rows Injected Here -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Conditions List -->
+          <div style="font-family:'Times New Roman',serif;font-size:0.9rem;line-height:1.35;margin-bottom:14px;">
+            <div style="font-weight:700;margin-bottom:4px;">Conditions:</div>
+            <div style="margin-bottom:3px;">
+              1) The quotation should be sent to Principal, L.D Engineering College,Navrangpura <span style="color:#204A87;text-decoration:underline;">Ahmedabad in</span> a sealed cover duly superscripted as <strong id="prev_superscripted_display" style="color:#C0392B;font-style:italic;">"Quotation for stationary items for library"</strong>
+            </div>
+            <div style="margin-bottom:3px;">
+              2) The last date for receiving the quotation is <strong id="prev_last_date_display" style="color:#C0392B;">.....................................</strong>
+            </div>
+            <div style="margin-bottom:3px;">
+              3) Your rates should be F.O.R. inclusive of all charges.
+            </div>
+            <div style="margin-bottom:3px;">
+              4) Government taxes may admissible.
+            </div>
+            <div style="margin-bottom:3px;">
+              5) The validity period for the quotation should be 3 months from the due date of receipt.
+            </div>
+            <div style="margin-bottom:3px;">
+              6) This office reserves the right to reject any or all quotations without assigning any reasons.
+            </div>
+          </div>
+
+          <!-- Principal Signature -->
+          <div style="text-align:right;font-family:'Times New Roman',serif;font-weight:700;font-size:1.05rem;margin:20px 0 16px 0;">
+            Principal
+          </div>
+
+          <!-- Red Line Above Footer -->
+          <div style="height:2px;background:#C0392B;margin:12px 0 8px 0;"></div>
+
+          <!-- Footer Accreditation Text -->
+          <div style="text-align:center;color:#204A87;font-family:'Times New Roman',serif;font-size:0.75rem;line-height:1.25;">
+            <div>Civil Engineering, Mechanical Engineering and Electrical Engineering programs accredited by NBA</div>
+            <div>Best Engineering College Award - 2019 by ISTE</div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // NOTE FOR APPROVAL OF REPAIRING (DOC-45) TAB
+  if (activeRepairsTab === 'doc45') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(360px, 480px) 1fr;gap:1.5rem;align-items:start;" class="doc45-grid-layout">
+        
+        <!-- LEFT: Approval Note Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>📝</span> Note for Approval of Repairing
+              </h3>
+              <span class="badge badge-primary">Official DOC-45</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Gujarati statutory note (મંજુરી નોંધ) for Principal approval of non-working equipment repairs under Contingency / PLA budget.
+            </p>
+          </div>
+
+          <form id="doc45Form" style="padding-top:1rem;">
+            
+            <!-- Quick Pre-fill -->
+            <div style="background:var(--neutral-800,#222);padding:0.75rem;border-radius:6px;margin-bottom:1rem;border:1px dashed var(--neutral-600,#444);">
+              <label class="form-label" style="font-size:0.78rem;color:var(--accent-primary,#6366f1);font-weight:700;">⚡ Quick Pre-Fill From Registered Equipment</label>
+              <select id="doc45_autofill_eq" class="form-control" style="font-size:0.82rem;">
+                <option value="">— Select registered equipment to auto-fill —</option>
+                ${requests.map(r => `<option value="${r.id}">#${r.id} – ${r.equipment_name} (${r.dept_name || 'Dept'})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- SECTION 1: Department & Date -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-primary,#6366f1);padding-left:0.5rem;">
+                1. Department &amp; Date
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Department <span style="color:var(--red-500);">*</span></label>
+                  <select id="doc45_dept" class="form-control" required>
+                    ${depts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Note Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc45_date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: Equipment & Cost Estimates -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                2. Equipment &amp; Estimated Repair Cost
+              </h4>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Equipment / Instruments Name <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="doc45_eq_name" class="form-control" placeholder="e.g. Lathe Machine, Oscilloscope, Canon IR 2002 Copier machine" required />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Estimated Cost (Rs.) <span style="color:var(--red-500);">*</span></label>
+                  <input type="number" step="0.01" id="doc45_cost" class="form-control" placeholder="0.00" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">In Words (Gujarati) <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc45_cost_words" class="form-control" placeholder="e.g. પાંચ હજાર રૂપિયા પુરા" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">GeM Portal Availability</label>
+                <select id="doc45_gem" class="form-control">
+                  <option value="ઉપલબ્ધ નથી.">GeM Portal ઉપર ઉપલબ્ધ નથી. (Not Available)</option>
+                  <option value="છે.">GeM Portal ઉપર ઉપલબ્ધ છે. (Available)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- SECTION 3: Reason & Principal Budget Allocation -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-green,#10b981);padding-left:0.5rem;">
+                3. Reason &amp; Budget Head
+              </h4>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Reason for Repairing <span style="color:var(--red-500);">*</span></label>
+                <textarea id="doc45_reason" class="form-control" rows="2" placeholder="e.g. વિદ્યાર્થીઓનાં લેબ પ્રેક્ટિકલ તથા શૈક્ષણિક કાર્ય અર્થે" required>વિદ્યાર્થીઓનાં શૈક્ષણિક તથા પ્રેક્ટિકલ કાર્ય અર્થે</textarea>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Budget Head</label>
+                  <select id="doc45_budget_head" class="form-control">
+                    <option value="Contingency">Contingency (આકસ્મિક ખર્ચ)</option>
+                    <option value="PLA">PLA (પી.એલ.એ.)</option>
+                    <option value="Other">Other Fund (અન્ય ફંડ)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Other Fund Mention (If any)</label>
+                  <input type="text" id="doc45_other_fund" class="form-control" placeholder="e.g. DTE Grant / SSIP" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Remarks (Optional)</label>
+                <input type="text" id="doc45_remarks" class="form-control" placeholder="e.g. Rate survey done" />
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--neutral-700,#444);">
+              <button type="button" class="btn btn-secondary" id="doc45ResetBtn">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btnDownloadDoc45" style="padding:0.65rem 1.25rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Approval Note (.docx)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Document Preview (Official Gujarati Word Layout) -->
+        <div style="background:#fff;color:#000;border-radius:6px;padding:2.5rem 3rem;box-shadow:0 8px 30px rgba(0,0,0,0.3);min-height:680px;font-family:'Nirmala UI','Shruti',Arial,sans-serif;" id="doc45WordPreview">
+          
+          <!-- Top Right Dept & Date -->
+          <div style="text-align:right;font-size:0.95rem;line-height:1.5;margin-bottom:1.5rem;">
+            <div><strong id="prev_doc45_dept">Library ડીપાર્ટમેન્ટ</strong></div>
+            <div>એલ.ડી. કોલેજ ઓફ એન્જી.,અમદાવાદ</div>
+            <div>તા.<span id="prev_doc45_date">07/09/2026</span></div>
+          </div>
+
+          <!-- Left Subheading -->
+          <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;">
+            સાદર રજુ:
+          </div>
+
+          <!-- Gujarati Body -->
+          <div style="font-size:0.98rem;line-height:2.2;text-align:justify;margin-bottom:2.5rem;">
+            અત્રેની સંસ્થાનાં <u style="font-weight:700;" id="prev_doc45_dept_body">Library</u> વિભાગ/વિદ્યાશાખાનાં આ સાથે સામેલ પત્રક મુજબનાં <u style="font-weight:700;" id="prev_doc45_eq">Canon IR 2002 Copier machine</u> સાધન/સાધનોનાં રીપેરીંગ માટે અંદાજીત કુલ રૂ. <u style="font-weight:700;" id="prev_doc45_cost">₹5,000/-</u> અંકે રૂપિયા <u style="font-weight:700;" id="prev_doc45_words">પાંચ હજાર રૂપિયા પુરા</u> ખર્ચ થાય તેમ છે. ઉક્ત સાધન/સાધનોનાં રીપેરીંગ ની સેવાઓ GeM Portal ઉપર <span id="prev_doc45_gem">ઉપલબ્ધ નથી.</span> સદર સાધનોનું રીપેરીંગ <u style="font-weight:700;" id="prev_doc45_reason">વિદ્યાર્થીઓનાં શૈક્ષણિક તથા પ્રેક્ટિકલ કાર્ય અર્થે</u> ને કારણે અનિવાર્ય છે. ઉક્ત વિગતો ધ્યાને લઇ જરૂરી રીપેરીંગ કરાવવા મંજુરી આપવા વિનંતી.
+          </div>
+
+          <!-- Signatures (3 tiers) -->
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:1.8rem;">
+            Head of department
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:1.8rem;">
+            Store Officer
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:2.5rem;">
+            Head Store &amp; Purchase/ Purchase Committee
+          </div>
+
+          <!-- Section: Approval of Principal -->
+          <div style="text-align:center;font-family:'Times New Roman',serif;font-weight:700;font-style:italic;text-decoration:underline;font-size:1.05rem;margin-bottom:0.75rem;">
+            Approval of Principal
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-size:0.92rem;margin-bottom:0.4rem;">
+            Expenditure to be incurred under following (√) marked budget head:
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-size:0.95rem;margin-bottom:0.75rem;display:flex;gap:2rem;align-items:center;">
+            <span id="prev_doc45_head_cont" style="font-weight:700;">☑ Contingency</span>
+            <span>/</span>
+            <span id="prev_doc45_head_pla">☐ PLA</span>
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-size:0.92rem;margin-bottom:0.75rem;">
+            Please mention if any other fund: <span id="prev_doc45_other_fund" style="border-bottom:1px dotted #888;display:inline-block;min-width:180px;"></span>
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-size:0.92rem;margin-bottom:2rem;">
+            Remarks: <span id="prev_doc45_remarks" style="border-bottom:1px dotted #888;display:inline-block;min-width:250px;"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;font-family:'Times New Roman',serif;font-size:0.95rem;">
+            <div>Approved / Not Approved</div>
+            <div style="font-weight:700;font-size:1.05rem;">Principal</div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // NOTE FOR WORK ORDER (WO – REPAIRING) (DOC-46) TAB
+  if (activeRepairsTab === 'doc46') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(360px, 480px) 1fr;gap:1.5rem;align-items:start;" class="doc46-grid-layout">
+        
+        <!-- LEFT: Work Order Note Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>📋</span> Note for Work Order (WO – Repairing)
+              </h3>
+              <span class="badge badge-primary">Official DOC-46</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Gujarati statutory note (વર્ક ઓર્ડર મંજુરી નોંધ) for issuance of Work Order to L1 vendor following quotation scrutiny &amp; purchase committee meeting.
+            </p>
+          </div>
+
+          <form id="doc46Form" style="padding-top:1rem;">
+            
+            <!-- Quick Pre-fill -->
+            <div style="background:var(--neutral-800,#222);padding:0.75rem;border-radius:6px;margin-bottom:1rem;border:1px dashed var(--neutral-600,#444);">
+              <label class="form-label" style="font-size:0.78rem;color:var(--accent-primary,#6366f1);font-weight:700;">⚡ Quick Pre-Fill From Registered Equipment</label>
+              <select id="doc46_autofill_eq" class="form-control" style="font-size:0.82rem;">
+                <option value="">— Select registered equipment to auto-fill —</option>
+                ${requests.map(r => `<option value="${r.id}">#${r.id} – ${r.equipment_name} (${r.dept_name || 'Dept'})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- SECTION 1: Note Reference & Department -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-primary,#6366f1);padding-left:0.5rem;">
+                1. Previous Note Reference &amp; Department
+              </h4>
+              <div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Prev. Page <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc46_prev_page" class="form-control" value="૧" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Department <span style="color:var(--red-500);">*</span></label>
+                  <select id="doc46_dept" class="form-control" required>
+                    ${depts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc46_wo_date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: Equipment & Quotation Process -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                2. Equipment &amp; Quotation Details
+              </h4>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Equipment / Instruments Name <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="doc46_eq_name" class="form-control" placeholder="e.g. Lathe Machine, Canon IR 2002 Copier machine" required />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Quotation Last Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc46_last_date" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Committee Meeting Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc46_meeting_date" class="form-control" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Lowest Rate / L1 Vendor Name &amp; Address <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="doc46_l1_vendor" class="form-control" placeholder="e.g. M/s AKSH Services, Ahmedabad" required />
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--neutral-700,#444);">
+              <button type="button" class="btn btn-secondary" id="doc46ResetBtn">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btnDownloadDoc46" style="padding:0.65rem 1.25rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download WO Note (.docx)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Document Preview (Official Gujarati Word Layout) -->
+        <div style="background:#fff;color:#000;border-radius:6px;padding:2.5rem 3rem;box-shadow:0 8px 30px rgba(0,0,0,0.3);min-height:650px;font-family:'Nirmala UI','Shruti',Arial,sans-serif;" id="doc46WordPreview">
+          
+          <!-- Top Right Dept & Date -->
+          <div style="text-align:right;font-size:0.95rem;line-height:1.5;margin-bottom:1.5rem;">
+            <div><strong id="prev_doc46_dept">Library ડીપાર્ટમેન્ટ</strong></div>
+            <div>એલ.ડી. કોલેજ ઓફ એન્જી.,અમદાવાદ</div>
+            <div>તા.<span id="prev_doc46_date">07/09/2026</span></div>
+          </div>
+
+          <!-- Left Subheading -->
+          <div style="font-weight:700;font-size:1.05rem;margin-bottom:1rem;">
+            સાદર રજુ:
+          </div>
+
+          <!-- Gujarati Body -->
+          <div style="font-size:0.98rem;line-height:2.2;text-align:justify;margin-bottom:2.5rem;">
+            પુર્વ પૃષ્ઠ <u style="font-weight:700;" id="prev_doc46_page">૧</u> ની નોંધ ઉપર આચાર્યા શ્રી તરફથી મળેલ મંજુરી અન્વયે અત્રેની સંસ્થાનાં <u style="font-weight:700;" id="prev_doc46_dept_body">Library</u> વિભાગ/વિદ્યાશાખાનાં <u style="font-weight:700;" id="prev_doc46_eq">Canon IR 2002 Copier machine</u> સાધન/સાધનોનાં રીપેરીંગ માટે તા. <u style="font-weight:700;" id="prev_doc46_lastdate">15/07/2026</u> સુધીમાં વિવિધ પેઢીઓ પાસેથી ભાવપત્રક મંગાવવામાં આવેલ. સમય મર્યાદામાં મળેલ ભાવપત્રકોનાં તુલનાત્મક પત્રક મુજબ જરૂરી રીપેરીંગ માટે સૌથી ઓછા ભાવ આપનાર પાર્ટી <u style="font-weight:700;" id="prev_doc46_l1">M/s AKSH Services, Ahmedabad</u> છે. / આ સાથે સામેલ પત્રક મુજબ છે. પેઢી/પેઢીઓ દ્વારા આપવામાં આવેલ ભાવ વ્યાજબી જણાય છે. આ સાથે ખરીદ સમિતિની તા. <u style="font-weight:700;" id="prev_doc46_mtgdate">20/07/2026</u> ની બેઠકની કાર્યવાહી નોંધ સામેલ છે. સદર બાબતો ધ્યાને લઇ લાયક ઠરેલ પેઢી/પેઢીઓને વર્ક ઓર્ડર આપવા બાબતે રજુ કરેલ છે.
+          </div>
+
+          <!-- Signatures (3 tiers) -->
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:2rem;">
+            Head of department
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:2rem;">
+            Store Officer
+          </div>
+          <div style="font-family:'Times New Roman',serif;font-weight:700;font-size:0.95rem;margin-bottom:2.5rem;">
+            Head Store &amp; Purchase/ Purchase Committee
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;font-family:'Times New Roman',serif;font-size:0.95rem;">
+            <div>Approved/Not Approved</div>
+            <div style="font-weight:700;font-size:1.05rem;">Principal</div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // PASS FOR PAYMENT (DOC-47) TAB — Non-GeM Purchase & Equipment Repairing
+  if (activeRepairsTab === 'doc47') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(380px, 500px) 1fr;gap:1.5rem;align-items:start;" class="doc47-grid-layout">
+        
+        <!-- LEFT: Pass for Payment Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>💳</span> Certificate &amp; Pass for Payment
+              </h3>
+              <span class="badge badge-primary">Official DOC-47</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Certificate to be given along with bills (CERTIFICATE TO BE GIVEN ALONG WITH BILLS) for Non-GeM direct purchase and equipment repairing.
+            </p>
+          </div>
+
+          <form id="doc47Form" style="padding-top:1rem;">
+            
+            <!-- Type Selection: Non-GeM Purchase vs Repairing -->
+            <div style="background:var(--neutral-850,#1a1a2e);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1.5px solid var(--primary-500,#6366f1);">
+              <label class="form-label" style="font-size:0.82rem;font-weight:700;color:var(--primary-300,#a5b4fc);margin-bottom:0.5rem;display:block;">
+                📑 SELECT PASS FOR PAYMENT CATEGORY
+              </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${activePassForPaymentType === 'non_gem' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="doc47_type_radio" value="non_gem" ${activePassForPaymentType === 'non_gem' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Non-GeM Purchase</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">11-Point Cert + Store Reg.</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${activePassForPaymentType === 'repair' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="doc47_type_radio" value="repair" ${activePassForPaymentType === 'repair' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Equipment Repairing</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">12-Point Cert + Parcel / Cash</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Quick Pre-fills -->
+            <div style="background:var(--neutral-800,#222);padding:0.75rem;border-radius:6px;margin-bottom:1.25rem;border:1px dashed var(--neutral-600,#444);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.5rem;">
+                <label class="form-label" style="font-size:0.78rem;color:var(--accent-orange,#f59e0b);font-weight:700;margin:0;">⚡ Quick Load Examples</label>
+                <div style="display:flex;gap:0.4rem;">
+                  <button type="button" class="btn btn-xs btn-outline-warning" id="btnLoadSanitizerExample" style="font-size:0.72rem;padding:2px 8px;">Load Sanitizer Purchase</button>
+                  <button type="button" class="btn btn-xs btn-outline-info" id="btnLoadRepairPassExample" style="font-size:0.72rem;padding:2px 8px;">Load Copier Repair</button>
+                </div>
+              </div>
+              <select id="doc47_autofill_eq" class="form-control" style="font-size:0.82rem;">
+                <option value="">— Or select registered equipment to populate —</option>
+                ${requests.map(r => `<option value="${r.id}">#${r.id} – ${r.equipment_name} (${r.dept_name || 'Dept'})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- SECTION 1: Bill & Party Details -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-primary,#6366f1);padding-left:0.5rem;">
+                1. Bill &amp; Order Details
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Ref. Bill No. <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc47_bill_no" class="form-control" value="16707" placeholder="e.g. 16707 or 554" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Bill Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc47_bill_date" class="form-control" value="2021-02-10" required />
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Party / Vendor Name &amp; City <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="doc47_party_name" class="form-control" value="Chandkheda Medical Store, Ahmedabad" placeholder="e.g. Chandkheda Medical Store, Ahmedabad" required />
+              </div>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">For Item / Repairing Description <span style="color:var(--red-500);">*</span></label>
+                <input type="text" id="doc47_item_desc" class="form-control" value="Sanitizer, Qty: 19 Bottles (500 ml each)" placeholder="e.g. Sanitizer, Qty: 19 Bottles (500 ml each) or Repairing of Copier" required />
+              </div>
+              <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">A.T. / Purchase Order No. <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc47_po_no" class="form-control" value="LDCE/Store/Covid-19/sanitizer" placeholder="e.g. LDCE/Store/Covid-19/sanitizer" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">P.O. / Order Date <span style="color:var(--red-500);">*</span></label>
+                  <input type="date" id="doc47_po_date" class="form-control" value="2021-02-09" required />
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Department <span style="color:var(--red-500);">*</span></label>
+                  <select id="doc47_dept" class="form-control" required>
+                    ${depts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group" id="grp_comp_date" style="${activePassForPaymentType === 'repair' ? '' : 'display:none;'}">
+                  <label class="form-label">Comparative Statement Date</label>
+                  <input type="date" id="doc47_comp_date" class="form-control" value="2021-02-05" />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: Certification & Payment Recommendation -->
+            <div style="margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-green,#10b981);padding-left:0.5rem;">
+                2. Certification, Head &amp; Payment Amount
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Payment Type</label>
+                  <select id="doc47_payment_type" class="form-control">
+                    <option value="Full">Full</option>
+                    <option value="Part">Part</option>
+                    <option value="Remaining">Remaining</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Budget Head <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc47_budget_head" class="form-control" value="Gymkhana" placeholder="e.g. Gymkhana, Contingency, PLA" required />
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Recommended Amount (Rs.) <span style="color:var(--red-500);">*</span></label>
+                  <input type="number" step="0.01" id="doc47_amount" class="form-control" value="3750" placeholder="0.00" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Amount in Words <span style="color:var(--red-500);">*</span></label>
+                  <input type="text" id="doc47_amount_words" class="form-control" value="Rupees Three Thousand Seven Hundred Fifty Only" required />
+                </div>
+              </div>
+              <div class="form-group" id="grp_deduction" style="${activePassForPaymentType === 'non_gem' ? '' : 'display:none;'}">
+                <label class="form-label">Amount Deducted (Point 10)</label>
+                <input type="text" id="doc47_deduction" class="form-control" value="NIL" placeholder="e.g. NIL or Rs. 150/-" />
+              </div>
+            </div>
+
+            <!-- SECTION 3: Register Entries (Non-GeM specific) -->
+            <div id="sec_non_gem_registers" style="${activePassForPaymentType === 'non_gem' ? '' : 'display:none;'} margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                3. Register Entries (Point 6 &amp; Store Use)
+              </h4>
+              <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Dept. Register Name</label>
+                  <input type="text" id="doc47_dept_reg_name" class="form-control" value="Deadstock / Stationary" placeholder="e.g. Deadstock" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Page No.</label>
+                  <input type="text" id="doc47_dept_page_no" class="form-control" value="12" placeholder="e.g. 12" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Sr. No.</label>
+                  <input type="text" id="doc47_dept_sr_no" class="form-control" value="05" placeholder="e.g. 05" />
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Store Gen. Reg. No.</label>
+                  <input type="text" id="doc47_store_reg_no" class="form-control" value="03" placeholder="e.g. 03" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Store Page No.</label>
+                  <input type="text" id="doc47_store_page_no" class="form-control" value="45" placeholder="e.g. 45" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Store Sr. No.</label>
+                  <input type="text" id="doc47_store_sr_no" class="form-control" value="18" placeholder="e.g. 18" />
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: Repair Details (Parcel, Spares & Cash Memo) -->
+            <div id="sec_repair_specifics" style="${activePassForPaymentType === 'repair' ? '' : 'display:none;'} margin-bottom:1.25rem;">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.5rem;border-left:3px solid var(--accent-orange,#f59e0b);padding-left:0.5rem;">
+                3. Parcel Clearance &amp; Cash Memo (Optional)
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Parcel Agency (M/S)</label>
+                  <input type="text" id="doc47_agency_name" class="form-control" placeholder="Leave blank if none" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">RR / LR No.</label>
+                  <input type="text" id="doc47_rr_lr_no" class="form-control" placeholder="e.g. RR-9821" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">RR / LR Date</label>
+                  <input type="date" id="doc47_rr_lr_date" class="form-control" />
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label">Spares Fitted In</label>
+                <input type="text" id="doc47_fitted_spares" class="form-control" placeholder="e.g. Canon Copier machine" />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.6rem;">
+                <div class="form-group">
+                  <label class="form-label">Cash Memo No.</label>
+                  <input type="text" id="doc47_cash_bill_no" class="form-control" placeholder="e.g. 102" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cash Date</label>
+                  <input type="date" id="doc47_cash_bill_date" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cash Amount</label>
+                  <input type="number" step="0.01" id="doc47_cash_amount" class="form-control" placeholder="0.00" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cash Recipient</label>
+                  <input type="text" id="doc47_cash_recipient" class="form-control" placeholder="Name" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:flex;gap:0.75rem;padding-top:1rem;border-top:1px solid var(--neutral-700,#444);">
+              <button type="button" class="btn btn-secondary" id="doc47ResetBtn" style="flex:1;">Reset</button>
+              <button type="submit" class="btn btn-primary" id="btnDownloadDoc47" style="flex:2;font-weight:700;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Official DOC-47 (.docx)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Official Document Preview (Exact Screenshot Match) -->
+        <div class="card" style="background:#ffffff;color:#111827;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:2.2rem 2.5rem;position:sticky;top:1rem;font-family:'Times New Roman',Times,serif;min-height:850px;" id="doc47WordPreviewContainer">
+          
+          <div style="font-size:0.75rem;color:#6b7280;text-align:right;margin-bottom:0.75rem;font-family:sans-serif;font-weight:600;">
+            LIVE DOCUMENT PREVIEW (<span id="prev_doc47_type_badge" style="color:#2563eb;">NON-GEM PURCHASE</span>)
+          </div>
+
+          <!-- Document Header -->
+          <div style="text-align:center;font-weight:700;font-size:1.15rem;text-decoration:underline;margin-bottom:1.5rem;color:#000;letter-spacing:0.5px;">
+            CERTIFICATE TO BE GIVEN ALONG WITH BILLS
+          </div>
+
+          <!-- 1. Ref Bill No & Party -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:0.95rem;margin-bottom:0.6rem;line-height:1.4;color:#000;">
+            <div>
+              <strong>1. &nbsp;Ref. Bill No</strong> <span id="prev_doc47_bill_no" style="font-weight:700;color:#dc2626;">16707</span>
+              <strong>Dt</strong> <span id="prev_doc47_bill_date" style="font-weight:700;color:#dc2626;">10/02/2021</span>
+              <strong>for</strong> <span id="prev_doc47_item_desc" style="font-weight:700;color:#dc2626;">Sanitizer, Qty: 19 Bottles (500 ml each)</span>
+            </div>
+            <div style="white-space:nowrap;margin-left:1rem;">
+              <strong>Party :-</strong> <span id="prev_doc47_party_name" style="font-weight:700;color:#dc2626;">Chandkheda Medical Store, Ahmedabad</span>
+            </div>
+          </div>
+
+          <!-- 2. PO / Order No -->
+          <div style="font-size:0.95rem;margin-bottom:0.6rem;line-height:1.4;color:#000;">
+            <strong>2 &nbsp; <span id="prev_doc47_po_label">A.T. No./Purchase Order No.</span></strong>
+            <span id="prev_doc47_po_no" style="font-weight:700;color:#dc2626;">LDCE/Store/Covid-19/sanitizer</span>,
+            <strong>Dated</strong> <span id="prev_doc47_po_date" style="font-weight:700;color:#dc2626;">09/02/2021</span>
+          </div>
+
+          <!-- 3. Comparative statement date (Repair only) -->
+          <div id="prev_doc47_comp_row" style="${activePassForPaymentType === 'repair' ? '' : 'display:none;'} font-size:0.95rem;margin-bottom:0.6rem;color:#000;">
+            <strong>3. &nbsp;Comparative Statement dated:</strong> <span id="prev_doc47_comp_date" style="font-weight:700;color:#dc2626;">05/02/2021</span>
+          </div>
+
+          <!-- Certified that: -->
+          <div style="font-weight:700;font-size:0.95rem;margin-top:0.85rem;margin-bottom:0.6rem;color:#000;">
+            Certified that:
+          </div>
+
+          <!-- Numbered Points List -->
+          <div id="prev_doc47_points_container" style="font-size:0.92rem;line-height:1.45;color:#000;">
+            <!-- Injected via JavaScript for non_gem or repair -->
+          </div>
+
+          <!-- Signatures (Department Level) -->
+          <div id="prev_doc47_dept_sigs_container" style="margin-top:2.5rem;margin-bottom:1.5rem;">
+            <!-- Injected via JavaScript (3 cols for non-gem, 4 cols for repair) -->
+          </div>
+
+          <!-- SOLID SEPARATOR LINE -->
+          <div style="border-top:1.5px solid #000;margin:1.5rem 0;"></div>
+
+          <!-- STORE USE ONLY BLOCK (Non-GeM) / (FOR OFFICE USE) BLOCK (Repair) -->
+          <div id="prev_doc47_bottom_container">
+            <!-- Injected via JavaScript -->
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // PURCHASE ORDER & WORK ORDER (DOC-43) TAB
+  if (activeRepairsTab === 'doc43') {
+    return `
+      ${renderAccessBanner('repairs')}
+      ${navTabs}
+
+      <div style="display:grid;grid-template-columns:minmax(400px, 520px) 1fr;gap:1.5rem;align-items:start;" class="doc43-grid-layout">
+        
+        <!-- LEFT: Purchase Order / Work Order Form & Controls -->
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header" style="border-bottom:1px solid var(--neutral-200,#333);padding-bottom:0.85rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;">
+                <span>📜</span> Purchase Order &amp; Work Order Generator
+              </h3>
+              <span class="badge badge-primary">Official DOC-43</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--neutral-400,#888);margin-top:0.25rem;">
+              Generate official LDCE Purchase Order (Non-GeM Goods) or Work Order (Equipment Repairing &amp; Maintenance) on letterhead.
+            </p>
+          </div>
+
+          <form id="doc43Form" style="padding-top:1rem;">
+            
+            <!-- Type Selection: Purchase Order vs Work Order -->
+            <div style="background:var(--neutral-850,#1a1a2e);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1.5px solid var(--primary-500,#6366f1);">
+              <label class="form-label" style="font-size:0.82rem;font-weight:700;color:var(--primary-300,#a5b4fc);margin-bottom:0.5rem;display:block;">
+                📑 SELECT DOCUMENT TYPE
+              </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${activePoType === 'purchase_order' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="doc43_type_radio" value="purchase_order" ${activePoType === 'purchase_order' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Purchase Order</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">Non-GeM Goods Purchase</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:0.75rem;background:var(--neutral-800,#222);padding:0.75rem 1rem;border-radius:6px;cursor:pointer;border:1.5px solid ${activePoType === 'work_order' ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)'};">
+                  <input type="radio" name="doc43_type_radio" value="work_order" ${activePoType === 'work_order' ? 'checked' : ''} style="cursor:pointer;width:18px;height:18px;" />
+                  <div>
+                    <div style="font-weight:700;font-size:0.92rem;color:#ffffff;">Work Order</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;">Equipment Repairing</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Quick Pre-fills -->
+            <div style="margin-bottom:1.25rem;">
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn_doc43_sample_po" style="font-size:0.8rem;padding:0.35rem 0.65rem;">
+                  💡 Sample Purchase Order
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" id="btn_doc43_sample_wo" style="font-size:0.8rem;padding:0.35rem 0.65rem;">
+                  💡 Sample Work Order
+                </button>
+              </div>
+
+              <div class="form-group" style="margin-bottom:0.5rem;">
+                <label class="form-label" style="font-size:0.8rem;color:var(--neutral-300,#ccc);">
+                  ⚡ Auto-fill from Registered Repair Equipment:
+                </label>
+                <select id="doc43_autofill_eq" class="form-control" style="font-size:0.85rem;">
+                  <option value="">-- Select Registered Equipment to auto-fill --</option>
+                  ${requests.map(r => `<option value="${r.id}" ${window._selectedRepairForDoc43 == r.id ? 'selected' : ''}>#${r.id} – ${(r.equipment_name || 'Equipment')} (${r.dept_name || 'Dept'})</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <!-- Reference & Date Header -->
+            <div style="background:var(--neutral-900,#111);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1px solid var(--neutral-700,#333);">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.6rem;">
+                1. Order Reference &amp; Header
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Department <span style="color:var(--red-400);">*</span></label>
+                  <select id="doc43_dept" class="form-control" style="font-size:0.82rem;">
+                    ${depts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Financial Year / Year <span style="color:var(--red-400);">*</span></label>
+                  <input type="text" id="doc43_fin_year" class="form-control" value="2021-22" placeholder="e.g. 2021-22 or 2021" style="font-size:0.82rem;" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Order / Reference No. <span style="color:var(--red-400);">*</span></label>
+                  <input type="text" id="doc43_ref_no" class="form-control" value="101" placeholder="e.g. 101 or Chemical/2021" style="font-size:0.82rem;" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Order Date <span style="color:var(--red-400);">*</span></label>
+                  <input type="date" id="doc43_date" class="form-control" style="font-size:0.82rem;" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- Recipient / Vendor Details -->
+            <div style="background:var(--neutral-900,#111);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1px solid var(--neutral-700,#333);">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin-bottom:0.6rem;">
+                2. Vendor Details (To,)
+              </h4>
+              <div class="form-group" style="margin-bottom:0.6rem;">
+                <label class="form-label" style="font-size:0.78rem;">Vendor / Supplier / Agency Name <span style="color:var(--red-400);">*</span></label>
+                <input type="text" id="doc43_vendor_name" class="form-control" placeholder="e.g. M/s Ashish Scientific Works" style="font-size:0.82rem;" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size:0.78rem;">Vendor Full Address &amp; Contact</label>
+                <textarea id="doc43_vendor_address" class="form-control" rows="2" placeholder="e.g. Opp. Kalupur Station, Relief Road, Ahmedabad - 380001" style="font-size:0.82rem;"></textarea>
+              </div>
+            </div>
+
+            <!-- Work Order Specific Details (Subject & Quotation Ref) -->
+            <div id="sec_doc43_wo_fields" style="background:var(--neutral-900,#111);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1px solid var(--neutral-700,#333);display:${activePoType === 'work_order' ? 'block' : 'none'};">
+              <h4 style="font-size:0.82rem;font-weight:700;color:var(--emerald-400,#34d399);text-transform:uppercase;margin-bottom:0.6rem;">
+                3. Work Order Subject &amp; Quotation Reference
+              </h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Sub: Repairing of <span style="color:var(--red-400);">*</span></label>
+                  <input type="text" id="doc43_subject" class="form-control" placeholder="e.g. Heating Mantle / Lathe Machine" style="font-size:0.82rem;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Ref. Your quotation dated: <span style="color:var(--red-400);">*</span></label>
+                  <input type="text" id="doc43_quotation_date" class="form-control" placeholder="e.g. 15/02/2021 or 2021-02-15" style="font-size:0.82rem;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Items Table -->
+            <div style="background:var(--neutral-900,#111);padding:0.85rem;border-radius:6px;margin-bottom:1.25rem;border:1px solid var(--neutral-700,#333);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+                <h4 style="font-size:0.82rem;font-weight:700;color:var(--primary-400,#818cf8);text-transform:uppercase;margin:0;">
+                  3. Line Items &amp; Charges
+                </h4>
+                <button type="button" class="btn btn-xs btn-outline-primary" id="btn_doc43_add_item" style="font-size:0.75rem;padding:2px 8px;">
+                  + Add Item Row
+                </button>
+              </div>
+
+              <div id="doc43_items_container" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
+                <!-- Injected via JavaScript -->
+              </div>
+
+              <!-- Extra Charges & Taxes -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;border-top:1px solid var(--neutral-800,#222);padding-top:0.75rem;">
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Other charges (Rs.)</label>
+                  <input type="number" id="doc43_other_charges" class="form-control" step="0.01" placeholder="0.00" style="font-size:0.82rem;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">GST Amount / Taxes (Rs.)</label>
+                  <input type="number" id="doc43_gst_amount" class="form-control" step="0.01" placeholder="0.00" style="font-size:0.82rem;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--emerald-400,#34d399);">Grand Total (Rs.)</label>
+                  <input type="number" id="doc43_grand_total" class="form-control" step="0.01" placeholder="0.00" style="font-size:0.85rem;font-weight:700;color:var(--emerald-400,#34d399);background:#062d1d;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size:0.78rem;">Signatory Authority</label>
+                  <input type="text" id="doc43_signatory" class="form-control" value="Principal" style="font-size:0.82rem;" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top:0.5rem;">
+                <label class="form-label" style="font-size:0.78rem;">Total in Words (Total Rupees)</label>
+                <input type="text" id="doc43_total_words" class="form-control" placeholder="e.g. Rupees Five Thousand Only" style="font-size:0.82rem;" />
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--neutral-800,#222);">
+              <button type="reset" class="btn btn-secondary" id="doc43ResetBtn">Reset Form</button>
+              <button type="submit" class="btn btn-primary" id="doc43SubmitBtn" style="padding:0.65rem 1.5rem;font-weight:700;">
+                📥 Download Word Document (.docx)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- RIGHT: Live Document Preview (Real Letterhead Design) -->
+        <div class="card" style="background:#f8fafc;color:#111827;padding:2rem 2.25rem;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);font-family:'Times New Roman',serif;min-height:750px;border:1px solid #cbd5e1;position:sticky;top:1rem;">
+          
+          <!-- TOP BADGE -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;font-family:sans-serif;border-bottom:1px dashed #cbd5e1;padding-bottom:0.4rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span class="badge" id="prev_doc43_type_badge" style="background:#e0e7ff;color:#3730a3;font-weight:700;font-size:0.75rem;padding:3px 8px;border-radius:4px;">
+                PURCHASE ORDER (NON-GEM)
+              </span>
+              <span style="font-size:0.75rem;color:#64748b;">Live Letterhead Preview</span>
+            </div>
+            <span style="font-size:0.75rem;color:#64748b;">Standard A4 Portrait</span>
+          </div>
+
+          <!-- 3-COLUMN LDCE LETTERHEAD -->
+          <table style="width:100%;border-collapse:collapse;border:none;margin-bottom:0.4rem;">
+            <tr>
+              <td style="width:18%;vertical-align:middle;text-align:left;border:none;padding:0;">
+                <img src="${ldceLogoImg}" alt="LDCE Logo" style="width:80px;height:auto;" />
+              </td>
+              <td style="width:64%;vertical-align:middle;text-align:center;border:none;padding:0 5px;">
+                <div style="font-size:0.85rem;font-weight:700;color:#c00000;margin-bottom:1px;">Government of Gujarat</div>
+                <div style="font-size:1.18rem;font-weight:700;color:#c00000;font-family:'Times New Roman',serif;line-height:1.2;margin-bottom:2px;">
+                  L. D. College of Engineering, Ahmedabad
+                </div>
+                <div style="font-size:0.75rem;font-weight:600;color:#1e3a8a;line-height:1.25;">
+                  Opp. Gujarat University, Navrangpura<br>
+                  Ahmedabad - 380 015
+                </div>
+                <div style="font-size:0.75rem;font-weight:600;color:#1e3a8a;line-height:1.25;">
+                  Phone : Office - 079 26306752, Principal - 079 26302887
+                </div>
+                <div style="font-size:0.7rem;color:#1e3a8a;line-height:1.25;">
+                  Email : ldce-abad-dte@gujarat.gov.in &nbsp; Website : www.ldce.ac.in
+                </div>
+              </td>
+              <td style="width:18%;vertical-align:middle;text-align:right;border:none;padding:0;">
+                <img src="${gandhiLogoImg}" alt="Gandhi 150 Logo" style="width:80px;height:auto;" />
+              </td>
+            </tr>
+          </table>
+
+          <!-- RED SEPARATOR LINE -->
+          <div style="border-top:2px solid #c00000;margin:0.35rem 0 0.75rem 0;"></div>
+
+          <!-- REFERENCE NUMBER & DATE LINE -->
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.92rem;font-weight:600;margin-bottom:0.85rem;">
+            <div id="prev_doc43_ref_line">
+              No. LDCE/Purchase / <span id="prev_doc43_dept_disp">Chemical</span> / <span id="prev_doc43_fin_year_disp" style="color:#c00000;">2021-22</span>
+            </div>
+            <div id="prev_doc43_date_line">
+              Dated: <span id="prev_doc43_date_disp">&nbsp;&nbsp;/&nbsp;&nbsp;/2021</span>
+            </div>
+          </div>
+
+          <!-- DOCUMENT TITLE -->
+          <div style="text-align:left;margin-bottom:0.75rem;">
+            <span style="font-weight:bold;text-decoration:underline;font-size:1.05rem;font-family:'Times New Roman',serif;" id="prev_doc43_title_disp">
+              Purchase Order
+            </span>
+          </div>
+
+          <!-- TO / VENDOR -->
+          <div style="margin-bottom:0.75rem;font-size:0.9rem;line-height:1.35;">
+            <div>To,</div>
+            <div id="prev_doc43_vendor_disp" style="font-weight:600;margin-left:0;">
+              M/s Ashish Scientific Works<br>Ahmedabad
+            </div>
+          </div>
+
+          <!-- WORK ORDER SUB & REF BLOCK (Hidden for PO) -->
+          <div id="prev_doc43_wo_sub_ref" style="display:none;margin-bottom:0.75rem;font-size:0.9rem;line-height:1.4;">
+            <div><strong>Sub:</strong> Repairing of <span id="prev_doc43_subject_disp">Heating Mantle</span></div>
+            <div><strong>Ref.</strong> Your quotation dated: <span id="prev_doc43_quotation_date_disp">10/02/2021</span></div>
+          </div>
+
+          <!-- OPENING INTRO -->
+          <div id="prev_doc43_intro_disp" style="margin-bottom:0.75rem;font-size:0.9rem;line-height:1.35;">
+            We are pleased to order out the following items for our institute.
+          </div>
+
+          <!-- ITEMS TABLE -->
+          <div style="margin-bottom:1.15rem;overflow-x:auto;">
+            <table id="prev_doc43_table" style="width:100%;border-collapse:collapse;border:1.5px solid #000;font-size:0.85rem;background:#fff;">
+              <!-- Injected via JavaScript -->
+            </table>
+          </div>
+
+          <!-- CONDITIONS / TERMS AND CONDITIONS -->
+          <div style="margin-bottom:1.75rem;font-size:0.83rem;line-height:1.35;">
+            <div style="font-weight:bold;margin-bottom:0.35rem;" id="prev_doc43_cond_title">Terms and Conditions:</div>
+            <ol style="margin:0;padding-left:1.35rem;" id="prev_doc43_cond_list">
+              <li>The items should be delivered urgently on receiving this order.</li>
+              <li>The items must be as per specifications mentioned above.</li>
+              <li>Taxes to be pay as per govt. rules.</li>
+              <li>The bill should be sent in quadruplicate.</li>
+              <li>Payment will be done as soon as possible after due scrutiny &amp; Inspection.</li>
+              <li>The undersigned reserves the right to cancel the order or reject one or all items which may be found of inferior quality or not as per our requirement or not as per specifications. Such items will be sent back to you at your cost.</li>
+            </ol>
+          </div>
+
+          <!-- PRINCIPAL SIGN-OFF -->
+          <div style="display:flex;justify-content:flex-end;margin-bottom:2rem;">
+            <div style="text-align:center;min-width:180px;">
+              <div style="font-weight:bold;font-size:0.95rem;" id="prev_doc43_signatory_disp">Principal</div>
+            </div>
+          </div>
+
+          <!-- FOOTER WITH RED TOP LINE & ACCREDITATION -->
+          <div style="border-top:1.5px solid #c00000;margin-top:auto;padding-top:0.4rem;text-align:center;font-size:0.72rem;color:#1e3a8a;line-height:1.35;">
+            <div>Civil Engineering, Mechanical Engineering and Electrical Engineering programs accredited by NBA</div>
+            <div>Best Engineering College Award - 2019 by ISTE</div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  // REGISTER (FORM-12) TAB
   const formHtml = canCreate('repairs') ? `
     <div class="card">
       <div class="card-header" style="border-bottom: 1px solid var(--neutral-200); padding-bottom: 0.85rem;">
@@ -5651,6 +7220,7 @@ function renderRepairsView(depts, requests) {
 
   return `
     ${renderAccessBanner('repairs')}
+    ${navTabs}
     ${formHtml}
 
     <div class="card">
@@ -5662,7 +7232,9 @@ function renderRepairsView(depts, requests) {
           </h3>
           <p style="font-size:0.8rem;color:var(--neutral-500);margin-top:0.2rem;">${requests.length} equipment record${requests.length !== 1 ? 's' : ''} registered</p>
         </div>
-        <a href="#/documents" class="btn btn-secondary btn-sm">Generate DOC-44/45/46 →</a>
+        <div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.switchToInquiryTab()">✉️ Create Inquiry Letter →</button>
+        </div>
       </div>
       <div class="table-responsive">
         <table class="data-table" style="font-size:0.82rem;">
@@ -5679,12 +7251,13 @@ function renderRepairsView(depts, requests) {
               <th>Prevailing Market Value (Rs.)</th>
               <th>Approx. Cost of Repairing (Rs.)</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             ${requests.length === 0
-              ? `<tr><td colspan="11" style="text-align:center;padding:2.5rem;color:var(--neutral-400);">No repair requests recorded yet. Use the form above to register equipment.</td></tr>`
-              : requests.map((r, idx) => `
+      ? `<tr><td colspan="12" style="text-align:center;padding:2.5rem;color:var(--neutral-400);">No repair requests recorded yet. Use the form above to register equipment.</td></tr>`
+      : requests.map((r, idx) => `
               <tr>
                 <td>${r.dept_name || '-'}</td>
                 <td><strong>${r.equipment_name}</strong></td>
@@ -5697,6 +7270,25 @@ function renderRepairsView(depts, requests) {
                 <td>₹${parseFloat(r.market_value || 0).toLocaleString('en-IN')}</td>
                 <td><strong>₹${parseFloat(r.est_repair_cost || 0).toLocaleString('en-IN')}</strong></td>
                 <td><span class="badge badge-info">${r.status}</span></td>
+                <td>
+                  <div style="display:flex;gap:4px;flex-wrap:nowrap;">
+                    <button type="button" class="btn btn-xs btn-outline-primary" style="padding:3px 7px;font-size:0.75rem;white-space:nowrap;" onclick="window.prefillInquiryFromRepair('${r.id}')" title="Generate Inquiry Letter (DOC-41)">
+                      ✉️ Inquiry
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-info" style="padding:3px 7px;font-size:0.75rem;white-space:nowrap;" onclick="window.prefillDoc43FromRepair('${r.id}')" title="Generate Purchase Order / Work Order (DOC-43)">
+                      📜 PO / WO (DOC-43)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" style="padding:3px 7px;font-size:0.75rem;white-space:nowrap;" onclick="window.prefillDoc45FromRepair('${r.id}')" title="Edit & Generate Approval Note (DOC-45)">
+                      📝 Note (DOC-45)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-warning" style="padding:3px 7px;font-size:0.75rem;white-space:nowrap;" onclick="window.prefillDoc46FromRepair('${r.id}')" title="Edit & Generate Work Order Note (DOC-46)">
+                      📋 WO Note (DOC-46)
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-success" style="padding:3px 7px;font-size:0.75rem;white-space:nowrap;" onclick="window.prefillDoc47FromRepair('${r.id}')" title="Generate Pass for Payment (DOC-47)">
+                      💳 Pass (DOC-47)
+                    </button>
+                  </div>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -5706,8 +7298,1959 @@ function renderRepairsView(depts, requests) {
   `;
 }
 
-function bindRepairsEvents() {
-  // Toggle previous repair date/amount fields
+function bindRepairsEvents(depts = [], requests = []) {
+  // Tab Switching
+  document.getElementById('tabBtnRepairsRegister')?.addEventListener('click', () => {
+    activeRepairsTab = 'register';
+    router();
+  });
+  document.getElementById('tabBtnRepairsInquiry')?.addEventListener('click', () => {
+    activeRepairsTab = 'inquiry';
+    router();
+  });
+  document.getElementById('tabBtnRepairsComp')?.addEventListener('click', () => {
+    activeRepairsTab = 'comp';
+    router();
+  });
+  document.getElementById('tabBtnRepairsDoc43')?.addEventListener('click', () => {
+    activeRepairsTab = 'doc43';
+    router();
+  });
+  document.getElementById('tabBtnRepairsDoc45')?.addEventListener('click', () => {
+    activeRepairsTab = 'doc45';
+    router();
+  });
+  document.getElementById('tabBtnRepairsDoc46')?.addEventListener('click', () => {
+    activeRepairsTab = 'doc46';
+    router();
+  });
+  document.getElementById('tabBtnRepairsDoc47')?.addEventListener('click', () => {
+    activeRepairsTab = 'doc47';
+    router();
+  });
+
+  window.switchToInquiryTab = () => {
+    activeRepairsTab = 'inquiry';
+    router();
+  };
+
+  window.switchToCompTab = () => {
+    activeRepairsTab = 'comp';
+    router();
+  };
+
+  window.switchToDoc43Tab = () => {
+    activeRepairsTab = 'doc43';
+    router();
+  };
+
+  window.switchToDoc47Tab = () => {
+    activeRepairsTab = 'doc47';
+    router();
+  };
+
+  window.prefillInquiryFromRepair = (repairId) => {
+    activeRepairsTab = 'inquiry';
+    window._selectedRepairForInquiry = repairId;
+    router();
+  };
+
+  window.prefillDoc43FromRepair = (repairId) => {
+    activeRepairsTab = 'doc43';
+    activePoType = 'work_order';
+    window._selectedRepairForDoc43 = repairId;
+    router();
+  };
+
+  window.prefillDoc45FromRepair = (repairId) => {
+    activeRepairsTab = 'doc45';
+    window._selectedRepairForDoc45 = repairId;
+    router();
+  };
+
+  window.prefillDoc46FromRepair = (repairId) => {
+    activeRepairsTab = 'doc46';
+    window._selectedRepairForDoc46 = repairId;
+    router();
+  };
+
+  window.prefillDoc47FromRepair = (repairId) => {
+    activeRepairsTab = 'doc47';
+    activePassForPaymentType = 'repair';
+    window._selectedRepairForDoc47 = repairId;
+    router();
+  };
+
+  // If in Comparative Statement tab:
+  if (activeRepairsTab === 'comp') {
+    const govtMembersList = [
+      'Prof S P Shah', 'Prof H M Ravat', 'V P Mamtora',
+      'Prof S M Shah', 'Prof M C Chudasama', 'Prof R B Khasiya', 'Prof N M Bhatt'
+    ];
+    const nonGovtMembersList = [
+      'Prof S P Shah', 'Prof H M Ravat', 'Prof A I Thakkar',
+      'Prof C S Sanghvi', 'Prof S M Shah', 'Prof M C Chudasama', 'Prof N M Bhatt'
+    ];
+
+    const statementForEl = document.getElementById('comp_statement_for');
+    const inqNoEl = document.getElementById('comp_inq_no');
+    const inqDateEl = document.getElementById('comp_inq_date');
+    const lastDateEl = document.getElementById('comp_last_date');
+    const openingDateEl = document.getElementById('comp_opening_date');
+    const itemDescEl = document.getElementById('comp_item_desc');
+    const itemQtyEl = document.getElementById('comp_item_qty');
+    const autofillEl = document.getElementById('comp_autofill_eq');
+
+    // Fund category radios
+    document.querySelectorAll('input[name="comp_fund_radio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        compFundType = e.target.value;
+        updateCompPreview();
+      });
+    });
+
+    // Render Vendor cards
+    const renderCompVendorCards = () => {
+      const container = document.getElementById('compVendorsFormContainer');
+      if (!container) return;
+
+      container.innerHTML = compVendors.map((v, idx) => `
+        <div style="background:var(--neutral-850,#1a1a2e);border:1px solid var(--neutral-700,#444);border-radius:6px;padding:0.75rem;">
+          <div style="font-size:0.8rem;font-weight:700;color:var(--accent-primary,#818cf8);margin-bottom:0.5rem;display:flex;justify-content:space-between;">
+            <span>Vendor ${idx + 1} (${idx === 0 ? 'AKSH Services' : (idx === 1 ? 'FAST Services' : 'KARAN Enterprise')})</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;">Firm Name</label>
+              <input type="text" class="form-control comp-v-name" value="${v.name || ''}" data-idx="${idx}" style="font-size:0.78rem;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;">Address</label>
+              <input type="text" class="form-control comp-v-addr" value="${v.address || ''}" data-idx="${idx}" style="font-size:0.78rem;" />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;">Rate (Rs.)</label>
+              <input type="number" step="0.01" class="form-control comp-v-rate" value="${v.rate || ''}" data-idx="${idx}" style="font-size:0.78rem;" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;">Govt. Tax (Rs.)</label>
+              <input type="number" step="0.01" class="form-control comp-v-tax" value="${v.tax || ''}" data-idx="${idx}" style="font-size:0.78rem;" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;">Other Charges</label>
+              <input type="number" step="0.01" class="form-control comp-v-other" value="${v.other || ''}" data-idx="${idx}" style="font-size:0.78rem;" placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:0.75rem;font-weight:700;">Grand Total</label>
+              <input type="number" step="0.01" class="form-control comp-v-total" value="${v.total || ''}" data-idx="${idx}" style="font-size:0.78rem;font-weight:700;" placeholder="0.00" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:0.75rem;">Terms & Conditions</label>
+            <input type="text" class="form-control comp-v-tc" value="${v.tc || ''}" data-idx="${idx}" style="font-size:0.78rem;" placeholder="e.g. 1 Year Warranty / Payment in 30 days" />
+          </div>
+        </div>
+      `).join('');
+
+      // Bind input events for vendors
+      container.querySelectorAll('.comp-v-name').forEach(el => {
+        el.addEventListener('input', (e) => {
+          compVendors[parseInt(e.target.dataset.idx, 10)].name = e.target.value;
+          updateCompPreview();
+        });
+      });
+      container.querySelectorAll('.comp-v-addr').forEach(el => {
+        el.addEventListener('input', (e) => {
+          compVendors[parseInt(e.target.dataset.idx, 10)].address = e.target.value;
+          updateCompPreview();
+        });
+      });
+      container.querySelectorAll('.comp-v-rate, .comp-v-tax, .comp-v-other').forEach(el => {
+        el.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.dataset.idx, 10);
+          const rate = parseFloat(container.querySelector(`.comp-v-rate[data-idx="${idx}"]`)?.value || 0);
+          const tax = parseFloat(container.querySelector(`.comp-v-tax[data-idx="${idx}"]`)?.value || 0);
+          const other = parseFloat(container.querySelector(`.comp-v-other[data-idx="${idx}"]`)?.value || 0);
+          const total = (rate + tax + other).toFixed(2);
+          
+          compVendors[idx].rate = container.querySelector(`.comp-v-rate[data-idx="${idx}"]`)?.value || '';
+          compVendors[idx].tax = container.querySelector(`.comp-v-tax[data-idx="${idx}"]`)?.value || '';
+          compVendors[idx].other = container.querySelector(`.comp-v-other[data-idx="${idx}"]`)?.value || '';
+          compVendors[idx].total = total;
+          
+          const totalInput = container.querySelector(`.comp-v-total[data-idx="${idx}"]`);
+          if (totalInput) totalInput.value = total;
+          
+          updateCompPreview();
+        });
+      });
+      container.querySelectorAll('.comp-v-total').forEach(el => {
+        el.addEventListener('input', (e) => {
+          compVendors[parseInt(e.target.dataset.idx, 10)].total = e.target.value;
+          updateCompPreview();
+        });
+      });
+      container.querySelectorAll('.comp-v-tc').forEach(el => {
+        el.addEventListener('input', (e) => {
+          compVendors[parseInt(e.target.dataset.idx, 10)].tc = e.target.value;
+          updateCompPreview();
+        });
+      });
+    };
+
+    const updateCompPreview = () => {
+      // 1. Badge & Statement for
+      const badge = document.getElementById('prev_comp_fund_badge');
+      if (badge) {
+        badge.textContent = compFundType.toUpperCase();
+        badge.style.color = compFundType === 'Govt Fund' ? '#2563eb' : '#059669';
+      }
+
+      const stFor = statementForEl?.value?.trim() || '.............................................';
+      const prevStFor = document.getElementById('prev_comp_statement_for');
+      if (prevStFor) prevStFor.textContent = stFor.startsWith('.') ? stFor : ' ' + stFor;
+
+      // 2. Inq No & Dates
+      const prevInqNo = document.getElementById('prev_comp_inq_no');
+      if (prevInqNo) prevInqNo.textContent = inqNoEl?.value || 'LDCE/store/CAMC-Canon/2019-20/337';
+
+      const inqDate = inqDateEl?.value;
+      const prevInqDate = document.getElementById('prev_comp_inq_date');
+      if (prevInqDate) {
+        if (inqDate) {
+          const [yyyy, mm, dd] = inqDate.split('-');
+          prevInqDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevInqDate.textContent = '31/01/2020';
+        }
+      }
+
+      const lastDate = lastDateEl?.value;
+      const prevLastDate = document.getElementById('prev_comp_last_date');
+      if (prevLastDate) {
+        if (lastDate) {
+          const [yyyy, mm, dd] = lastDate.split('-');
+          prevLastDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevLastDate.textContent = '12/06/2020';
+        }
+      }
+
+      const openDate = openingDateEl?.value;
+      const prevOpenDate = document.getElementById('prev_comp_opening_date');
+      if (prevOpenDate) {
+        if (openDate) {
+          const [yyyy, mm, dd] = openDate.split('-');
+          prevOpenDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevOpenDate.textContent = '';
+        }
+      }
+
+      // 3. Item row
+      const prevDesc = document.getElementById('prev_comp_row_desc');
+      if (prevDesc) prevDesc.textContent = itemDescEl?.value || '';
+
+      const prevQty = document.getElementById('prev_comp_row_qty');
+      if (prevQty) prevQty.textContent = itemQtyEl?.value || '';
+
+      // 4. Vendors Header & Rates
+      const vendorHeadersEl = document.getElementById('prev_comp_vendor_headers');
+      if (vendorHeadersEl) {
+        vendorHeadersEl.innerHTML = compVendors.map(v => `
+          <th style="border:1px solid #000;padding:4px;width:18%;text-align:center;">
+            <div style="background:#fef08a;font-weight:700;padding:1px 2px;">${v.name || 'Vendor'}</div>
+            <div style="font-size:0.75rem;font-weight:normal;line-height:1.2;margin-top:2px;">${v.address || ''}</div>
+          </th>
+        `).join('');
+      }
+
+      compVendors.forEach((v, idx) => {
+        const i = idx + 1;
+        const rateEl = document.getElementById(`prev_comp_v${i}_rate`);
+        if (rateEl) rateEl.textContent = v.rate ? parseFloat(v.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '';
+
+        const taxEl = document.getElementById(`prev_comp_v${i}_tax`);
+        if (taxEl) taxEl.textContent = v.tax ? parseFloat(v.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '';
+
+        const otherEl = document.getElementById(`prev_comp_v${i}_other`);
+        if (otherEl) otherEl.textContent = v.other ? parseFloat(v.other).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '';
+
+        const totalEl = document.getElementById(`prev_comp_v${i}_total`);
+        if (totalEl) totalEl.textContent = v.total ? parseFloat(v.total).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '';
+
+        const tcEl = document.getElementById(`prev_comp_v${i}_tc`);
+        if (tcEl) tcEl.textContent = v.tc || '';
+      });
+
+      // 5. Dynamic Committee Table (7 members)
+      const commMembers = compFundType === 'Non-Govt Fund' ? nonGovtMembersList : govtMembersList;
+      const commRowEl = document.getElementById('prev_comp_committee_row');
+      if (commRowEl) {
+        commRowEl.innerHTML = commMembers.map(m => `
+          <td style="border:1px solid #000;padding:24px 3px 6px 3px;width:${(100 / commMembers.length).toFixed(1)}%;text-align:center;font-size:0.8rem;line-height:1.2;">
+            ${m}
+          </td>
+        `).join('');
+      }
+    };
+
+    // Quick fill example button
+    document.getElementById('btnLoadCanonExample')?.addEventListener('click', () => {
+      if (statementForEl) statementForEl.value = 'CAMC of Canon IR 2002 Copier machine';
+      if (inqNoEl) inqNoEl.value = 'LDCE/store/CAMC-Canon/2019-20/337';
+      if (inqDateEl) inqDateEl.value = '2020-01-31';
+      if (lastDateEl) lastDateEl.value = '2020-06-12';
+      if (itemDescEl) itemDescEl.value = 'CAMC of Canon IR 2002 Copier machine';
+      if (itemQtyEl) itemQtyEl.value = '01 No.';
+
+      compVendors = [
+        { name: 'AKSH Services', address: "1-Anand Bhavan, Abadnagar Bopal, A'bad", rate: '2500.00', tax: '450.00', other: '0.00', total: '2950.00', tc: 'Payment within 30 days' },
+        { name: 'FAST Services', address: "I-2, GF-Kumkum Residency B/h Satyam Hospital, Chandkheda A'bad", rate: '2800.00', tax: '504.00', other: '0.00', total: '3304.00', tc: '1 Year Warranty' },
+        { name: 'KARAN Enterprise', address: "C-10 Appts, Central jail road, Subhashbridge, A'bad", rate: '3100.00', tax: '558.00', other: '0.00', total: '3658.00', tc: 'Doorstep service' }
+      ];
+
+      renderCompVendorCards();
+      updateCompPreview();
+    });
+
+    // Autofill from equipment
+    if (autofillEl) {
+      autofillEl.addEventListener('change', (e) => {
+        const reqId = e.target.value;
+        const selected = requests.find(r => String(r.id) === String(reqId));
+        if (selected) {
+          if (statementForEl) statementForEl.value = `Repair of ${selected.equipment_name}`;
+          if (itemDescEl) itemDescEl.value = `Repairing of ${selected.equipment_name}`;
+          if (itemQtyEl) itemQtyEl.value = '01 No.';
+          updateCompPreview();
+        }
+      });
+    }
+
+    [statementForEl, inqNoEl, inqDateEl, lastDateEl, openingDateEl, itemDescEl, itemQtyEl].forEach(input => {
+      input?.addEventListener('input', updateCompPreview);
+      input?.addEventListener('change', updateCompPreview);
+    });
+
+    renderCompVendorCards();
+    updateCompPreview();
+
+    // Form Submit / Download DOC-42
+    document.getElementById('compStatementForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnDownloadCompDoc');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Generating DOC-42...';
+
+      const payload = {
+        fund_type: compFundType,
+        is_non_govt: compFundType === 'Non-Govt Fund',
+        statement_for: statementForEl?.value?.trim() || '',
+        inquiry_no: inqNoEl?.value?.trim() || '',
+        inquiry_date: inqDateEl?.value || '',
+        last_date: lastDateEl?.value || '',
+        opening_date: openingDateEl?.value || '',
+        items: [
+          {
+            item_name: itemDescEl?.value?.trim() || '',
+            qty: itemQtyEl?.value?.trim() || '',
+            rates: compVendors.map(v => v.rate ? parseFloat(v.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '')
+          }
+        ],
+        vendors: compVendors.map(v => ({
+          name: v.name || '',
+          address: v.address || '',
+          rate: v.rate ? parseFloat(v.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          tax: v.tax ? parseFloat(v.tax).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          other: v.other ? parseFloat(v.other).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          total: v.total ? parseFloat(v.total).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '',
+          tc: v.tc || ''
+        }))
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-42', payload);
+      } catch (err) {
+        alert('Error generating Comparative Statement: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // If in Inquiry Letter tab:
+  if (activeRepairsTab === 'inquiry') {
+    const deptEl = document.getElementById('inq_dept');
+    const finYearEl = document.getElementById('inq_fin_year');
+    const refNoEl = document.getElementById('inq_ref_no');
+    const dateEl = document.getElementById('inq_date');
+    const vendorNameEl = document.getElementById('inq_vendor_name');
+    const vendorAddressEl = document.getElementById('inq_vendor_address');
+    const subjectEl = document.getElementById('inq_subject');
+    const superscriptedEl = document.getElementById('inq_superscribed');
+    const lastDateEl = document.getElementById('inq_last_date');
+    const autofillEl = document.getElementById('inq_autofill_eq');
+
+    // Default 15 days from today for last date
+    if (lastDateEl && !lastDateEl.value) {
+      const d = new Date();
+      d.setDate(d.getDate() + 15);
+      lastDateEl.value = d.toISOString().split('T')[0];
+    }
+
+    // Render dynamic item rows in form and update live preview
+    const renderItemsFormAndPreview = () => {
+      const container = document.getElementById('inquiryItemsContainer');
+      if (container) {
+        let rowsHeader = `
+          <div style="display:grid;grid-template-columns:1fr 80px 1fr 30px;gap:0.4rem;padding:0 4px;font-size:0.75rem;font-weight:700;color:var(--neutral-400,#aaa);">
+            <div>Description of Item</div>
+            <div>Qty</div>
+            <div>Remarks / Specs</div>
+            <div></div>
+          </div>
+        `;
+        let rowsBody = inquiryFormItems.map((item, idx) => `
+          <div style="display:grid;grid-template-columns:1fr 80px 1fr 30px;gap:0.4rem;align-items:center;background:var(--neutral-850,#1a1a2e);padding:6px;border-radius:4px;border:1px solid var(--neutral-700,#333);" data-row="${idx}">
+            <input type="text" class="form-control inq-item-name" style="font-size:0.78rem;padding:4px 6px;" placeholder="e.g. Register Books / Lathe Chuck" value="${item.item_name || ''}" data-idx="${idx}" />
+            <input type="text" class="form-control inq-item-qty" style="font-size:0.78rem;padding:4px 6px;" placeholder="e.g. 02 Nos" value="${item.qty || ''}" data-idx="${idx}" />
+            <input type="text" class="form-control inq-item-remarks" style="font-size:0.78rem;padding:4px 6px;" placeholder="e.g. As per sample" value="${item.remarks || ''}" data-idx="${idx}" />
+            <button type="button" class="btn btn-sm btn-outline-danger btn-del-inq-item" style="padding:2px 5px;font-size:0.75rem;" data-idx="${idx}" title="Remove row">✕</button>
+          </div>
+        `).join('');
+
+        container.innerHTML = rowsHeader + rowsBody;
+
+        // Bind input events on rows
+        container.querySelectorAll('.inq-item-name').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            inquiryFormItems[idx].item_name = e.target.value;
+            updateLivePreview();
+          });
+        });
+        container.querySelectorAll('.inq-item-qty').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            inquiryFormItems[idx].qty = e.target.value;
+            updateLivePreview();
+          });
+        });
+        container.querySelectorAll('.inq-item-remarks').forEach(el => {
+          el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            inquiryFormItems[idx].remarks = e.target.value;
+            updateLivePreview();
+          });
+        });
+        container.querySelectorAll('.btn-del-inq-item').forEach(el => {
+          el.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (inquiryFormItems.length > 1) {
+              inquiryFormItems.splice(idx, 1);
+            } else {
+              inquiryFormItems[0] = { item_name: '', qty: '', remarks: '' };
+            }
+            renderItemsFormAndPreview();
+          });
+        });
+      }
+
+      updateLivePreview();
+    };
+
+    const updateLivePreview = () => {
+      // 1. Dept & Fin Year
+      const deptVal = deptEl?.value || 'Library';
+      const finYearVal = finYearEl?.value || '2021-22';
+      const refNoVal = refNoEl?.value?.trim() || '';
+      const prevDeptFin = document.getElementById('prev_ref_dept_fin');
+      if (prevDeptFin) prevDeptFin.textContent = `${deptVal}/${finYearVal}/`;
+      const prevInqNo = document.getElementById('prev_ref_inq_no');
+      if (prevInqNo) prevInqNo.textContent = refNoVal;
+
+      // 2. Date
+      const dateVal = dateEl?.value;
+      const prevDateDisplay = document.getElementById('prev_date_display');
+      if (prevDateDisplay) {
+        if (dateVal) {
+          const [yyyy, mm, dd] = dateVal.split('-');
+          prevDateDisplay.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevDateDisplay.textContent = '  /  /2021';
+        }
+      }
+
+      // 3. To Vendor
+      const vName = vendorNameEl?.value?.trim();
+      const vAddr = vendorAddressEl?.value?.trim();
+      const prevVendor = document.getElementById('prev_vendor_details');
+      if (prevVendor) {
+        if (vName || vAddr) {
+          prevVendor.innerHTML = `
+            ${vName ? `<div style="font-weight:700;">${vName}</div>` : ''}
+            ${vAddr ? `<div>${vAddr}</div>` : ''}
+          `;
+        } else {
+          prevVendor.innerHTML = '';
+        }
+      }
+
+      // 4. Subject
+      const subVal = subjectEl?.value?.trim() || 'stationary items for library';
+      const prevSub = document.getElementById('prev_sub_display');
+      if (prevSub) prevSub.textContent = subVal;
+
+      // 5. Table Rows - Pad to 6 rows minimum
+      const tbody = document.getElementById('prev_items_tbody');
+      if (tbody) {
+        const rowsCount = Math.max(inquiryFormItems.length, 6);
+        let rowsHtml = '';
+        for (let i = 0; i < rowsCount; i++) {
+          const item = inquiryFormItems[i] || {};
+          rowsHtml += `
+            <tr style="height:28px;">
+              <td style="border:1px solid #000;padding:4px 6px;text-align:center;">${i + 1}</td>
+              <td style="border:1px solid #000;padding:4px 8px;">${item.item_name || ''}</td>
+              <td style="border:1px solid #000;padding:4px 6px;text-align:center;">${item.qty || ''}</td>
+              <td style="border:1px solid #000;padding:4px 8px;">${item.remarks || ''}</td>
+            </tr>
+          `;
+        }
+        tbody.innerHTML = rowsHtml;
+      }
+
+      // 6. Conditions Superscripted & Last Date
+      const superVal = superscriptedEl?.value?.trim() || `Quotation for ${subVal}`;
+      const prevSuper = document.getElementById('prev_superscripted_display');
+      if (prevSuper) prevSuper.textContent = `"${superVal}"`;
+
+      const lastDateVal = lastDateEl?.value;
+      const prevLastDate = document.getElementById('prev_last_date_display');
+      if (prevLastDate) {
+        if (lastDateVal) {
+          const [yyyy, mm, dd] = lastDateVal.split('-');
+          prevLastDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevLastDate.textContent = '.....................................';
+        }
+      }
+    };
+
+    // Add item button
+    document.getElementById('btnAddInquiryItem')?.addEventListener('click', () => {
+      inquiryFormItems.push({ item_name: '', qty: '', remarks: '' });
+      renderItemsFormAndPreview();
+    });
+
+    // Autofill dropdown
+    if (autofillEl) {
+      autofillEl.addEventListener('change', (e) => {
+        const reqId = e.target.value;
+        const selected = requests.find(r => String(r.id) === String(reqId));
+        if (selected) {
+          if (deptEl && selected.dept_name) {
+            for (let opt of deptEl.options) {
+              if (opt.value === selected.dept_name || opt.text.includes(selected.dept_name)) {
+                deptEl.value = opt.value;
+                break;
+              }
+            }
+          }
+          if (subjectEl) subjectEl.value = `repair of ${selected.equipment_name}`;
+          if (superscriptedEl) superscriptedEl.value = `Quotation for repair of ${selected.equipment_name} for ${(selected.dept_name || 'department').toLowerCase()}`;
+          inquiryFormItems = [
+            {
+              item_name: selected.equipment_name,
+              qty: '01 No.',
+              remarks: selected.fault_desc ? `Fault: ${selected.fault_desc.substring(0, 50)}` : 'Repair work'
+            }
+          ];
+          renderItemsFormAndPreview();
+        }
+      });
+    }
+
+    // Handle preselection passed via window._selectedRepairForInquiry
+    if (window._selectedRepairForInquiry) {
+      const repId = window._selectedRepairForInquiry;
+      window._selectedRepairForInquiry = null;
+      if (autofillEl) {
+        autofillEl.value = repId;
+        autofillEl.dispatchEvent(new Event('change'));
+      }
+    } else {
+      renderItemsFormAndPreview();
+    }
+
+    // Input listeners for preview synchronization
+    [deptEl, finYearEl, refNoEl, dateEl, vendorNameEl, vendorAddressEl, subjectEl, superscriptedEl, lastDateEl].forEach(input => {
+      input?.addEventListener('input', updateLivePreview);
+      input?.addEventListener('change', updateLivePreview);
+    });
+
+    // Reset button
+    document.getElementById('inquiryResetBtn')?.addEventListener('click', () => {
+      if (subjectEl) subjectEl.value = 'stationary items for library';
+      if (superscriptedEl) superscriptedEl.value = 'Quotation for stationary items for library';
+      if (vendorNameEl) vendorNameEl.value = '';
+      if (vendorAddressEl) vendorAddressEl.value = '';
+      if (refNoEl) refNoEl.value = '';
+      inquiryFormItems = [{ item_name: '', qty: '', remarks: '' }];
+      renderItemsFormAndPreview();
+    });
+
+    // Submit & Download Docx
+    document.getElementById('inquiryLetterForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnDownloadInquiryDoc');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating Inquiry Letter...';
+
+      const payload = {
+        dept_name: deptEl?.value || 'Library',
+        fin_year: finYearEl?.value || '2021-22',
+        inquiry_no: refNoEl?.value?.trim() || '',
+        letter_date: dateEl?.value || '',
+        vendor_name: vendorNameEl?.value?.trim() || '',
+        vendor_address: vendorAddressEl?.value?.trim() || '',
+        quotation_for: subjectEl?.value?.trim() || 'stationary items for library',
+        superscribed_text: superscriptedEl?.value?.trim() || `Quotation for ${subjectEl?.value || 'stationary items'}`,
+        last_date: lastDateEl?.value || '',
+        items: inquiryFormItems.filter(it => it.item_name && it.item_name.trim())
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-41', payload);
+      } catch (err) {
+        alert('Error generating Inquiry Letter: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // If in Purchase Order & Work Order (DOC-43) tab:
+  if (activeRepairsTab === 'doc43') {
+    const deptEl = document.getElementById('doc43_dept');
+    const finYearEl = document.getElementById('doc43_fin_year');
+    const refNoEl = document.getElementById('doc43_ref_no');
+    const dateEl = document.getElementById('doc43_date');
+    const vendorNameEl = document.getElementById('doc43_vendor_name');
+    const vendorAddressEl = document.getElementById('doc43_vendor_address');
+    const subjectEl = document.getElementById('doc43_subject');
+    const quotationDateEl = document.getElementById('doc43_quotation_date');
+    const otherChargesEl = document.getElementById('doc43_other_charges');
+    const gstAmountEl = document.getElementById('doc43_gst_amount');
+    const grandTotalEl = document.getElementById('doc43_grand_total');
+    const totalWordsEl = document.getElementById('doc43_total_words');
+    const signatoryEl = document.getElementById('doc43_signatory');
+    const autofillEl = document.getElementById('doc43_autofill_eq');
+    const itemsContainer = document.getElementById('doc43_items_container');
+
+    const formatDate = (dStr) => {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    const toggleTypeUI = () => {
+      const isWorkOrder = activePoType === 'work_order';
+      const secWo = document.getElementById('sec_doc43_wo_fields');
+      const prevWoSubRef = document.getElementById('prev_doc43_wo_sub_ref');
+      if (secWo) secWo.style.display = isWorkOrder ? 'block' : 'none';
+      if (prevWoSubRef) prevWoSubRef.style.display = isWorkOrder ? 'block' : 'none';
+
+      document.querySelectorAll('input[name="doc43_type_radio"]').forEach(radio => {
+        radio.checked = radio.value === activePoType;
+        const parent = radio.closest('label');
+        if (parent) {
+          parent.style.borderColor = radio.checked ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)';
+        }
+      });
+
+      renderItemsInputs();
+      updateDoc43Preview();
+    };
+
+    const renderItemsInputs = () => {
+      if (!itemsContainer) return;
+      const isWorkOrder = activePoType === 'work_order';
+
+      if (poFormItems.length === 0) {
+        poFormItems.push({ item_name: '', unit_rate: '', qty: '', total_amount: '' });
+      }
+
+      itemsContainer.innerHTML = poFormItems.map((item, idx) => `
+        <div style="background:var(--neutral-850,#1a1a2e);padding:0.6rem;border-radius:4px;border:1px solid var(--neutral-750,#2a2a3e);display:flex;flex-direction:column;gap:0.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.75rem;font-weight:700;color:var(--primary-300,#a5b4fc);">#Item ${idx + 1}</span>
+            ${poFormItems.length > 1 ? `
+              <button type="button" class="btn btn-xs btn-outline-danger" onclick="window.removePoItemRow(${idx})" style="padding:1px 6px;font-size:0.7rem;">✕ Remove</button>
+            ` : ''}
+          </div>
+          <div style="display:grid;grid-template-columns:${isWorkOrder ? '2fr 1fr 1fr' : '2fr 1fr 1fr 1fr'};gap:0.5rem;align-items:center;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.7rem;margin-bottom:2px;">${isWorkOrder ? 'Description of repairing' : 'Description / Item Name'}</label>
+              <input type="text" class="form-control po-item-name" data-idx="${idx}" value="${item.item_name || ''}" placeholder="${isWorkOrder ? 'e.g. Replacement of Heating Element' : 'e.g. Laboratory Glassware'}" style="font-size:0.8rem;padding:0.35rem 0.5rem;" />
+            </div>
+            ${!isWorkOrder ? `
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:0.7rem;margin-bottom:2px;">Unit Rate (₹)</label>
+                <input type="number" step="0.01" class="form-control po-item-rate" data-idx="${idx}" value="${item.unit_rate || ''}" placeholder="0.00" style="font-size:0.8rem;padding:0.35rem 0.5rem;" />
+              </div>
+            ` : ''}
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.7rem;margin-bottom:2px;">Qty</label>
+              <input type="text" class="form-control po-item-qty" data-idx="${idx}" value="${item.qty || ''}" placeholder="e.g. 1 or 10 Nos" style="font-size:0.8rem;padding:0.35rem 0.5rem;" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.7rem;margin-bottom:2px;">${isWorkOrder ? 'Amount in Rs. (₹)' : 'Total (₹)'}</label>
+              <input type="number" step="0.01" class="form-control po-item-total" data-idx="${idx}" value="${item.total_amount || ''}" placeholder="0.00" style="font-size:0.8rem;padding:0.35rem 0.5rem;" />
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Bind input events for item inputs
+      itemsContainer.querySelectorAll('.po-item-name').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-idx'));
+          poFormItems[idx].item_name = e.target.value;
+          updateDoc43Preview();
+        });
+      });
+
+      itemsContainer.querySelectorAll('.po-item-rate').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-idx'));
+          poFormItems[idx].unit_rate = e.target.value;
+          const qtyNum = parseFloat(poFormItems[idx].qty) || 1;
+          const rateNum = parseFloat(e.target.value) || 0;
+          if (rateNum > 0) {
+            poFormItems[idx].total_amount = (rateNum * qtyNum).toFixed(2);
+            const totalInput = itemsContainer.querySelector(`.po-item-total[data-idx="${idx}"]`);
+            if (totalInput) totalInput.value = poFormItems[idx].total_amount;
+          }
+          calculateGrandTotal();
+          updateDoc43Preview();
+        });
+      });
+
+      itemsContainer.querySelectorAll('.po-item-qty').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-idx'));
+          poFormItems[idx].qty = e.target.value;
+          if (!isWorkOrder) {
+            const qtyNum = parseFloat(e.target.value) || 1;
+            const rateNum = parseFloat(poFormItems[idx].unit_rate) || 0;
+            if (rateNum > 0) {
+              poFormItems[idx].total_amount = (rateNum * qtyNum).toFixed(2);
+              const totalInput = itemsContainer.querySelector(`.po-item-total[data-idx="${idx}"]`);
+              if (totalInput) totalInput.value = poFormItems[idx].total_amount;
+            }
+          }
+          calculateGrandTotal();
+          updateDoc43Preview();
+        });
+      });
+
+      itemsContainer.querySelectorAll('.po-item-total').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = parseInt(e.target.getAttribute('data-idx'));
+          poFormItems[idx].total_amount = e.target.value;
+          calculateGrandTotal();
+          updateDoc43Preview();
+        });
+      });
+    };
+
+    window.removePoItemRow = (idx) => {
+      poFormItems.splice(idx, 1);
+      renderItemsInputs();
+      calculateGrandTotal();
+      updateDoc43Preview();
+    };
+
+    document.getElementById('btn_doc43_add_item')?.addEventListener('click', () => {
+      poFormItems.push({ item_name: '', unit_rate: '', qty: '', total_amount: '' });
+      renderItemsInputs();
+      updateDoc43Preview();
+    });
+
+    const calculateGrandTotal = () => {
+      let itemsSum = 0;
+      poFormItems.forEach(item => {
+        itemsSum += parseFloat(item.total_amount || 0);
+      });
+      const other = parseFloat(otherChargesEl?.value || 0);
+      const gst = parseFloat(gstAmountEl?.value || 0);
+      const grand = itemsSum + other + gst;
+
+      if (grandTotalEl) grandTotalEl.value = grand > 0 ? grand.toFixed(2) : '';
+      if (totalWordsEl && grand > 0) {
+        totalWordsEl.value = numToEnglishWords(grand);
+      }
+    };
+
+    const updateDoc43Preview = () => {
+      const isWorkOrder = activePoType === 'work_order';
+      const dept = deptEl?.value || 'Chemical';
+      const finYear = finYearEl?.value || (isWorkOrder ? '2021' : '2021-22');
+      const refNo = refNoEl?.value || '101';
+      const dateVal = dateEl?.value || '2021-03-15';
+      const vendorName = vendorNameEl?.value?.trim() || 'M/s Ashish Scientific Works';
+      const vendorAddress = vendorAddressEl?.value?.trim() || 'Ahmedabad';
+      const subject = subjectEl?.value?.trim() || 'Heating Mantle';
+      const quotationDate = quotationDateEl?.value?.trim() || '10/02/2021';
+      const otherCharges = otherChargesEl?.value?.trim() || '';
+      const gstAmount = gstAmountEl?.value?.trim() || '';
+      const grandTotal = grandTotalEl?.value?.trim() || '0';
+      const totalWords = totalWordsEl?.value?.trim() || (grandTotal ? numToEnglishWords(grandTotal) : 'Rupees Zero Only');
+      const signatory = signatoryEl?.value?.trim() || 'Principal';
+
+      // Badge
+      const badge = document.getElementById('prev_doc43_type_badge');
+      if (badge) {
+        badge.textContent = isWorkOrder ? 'WORK ORDER (EQUIPMENT REPAIRING)' : 'PURCHASE ORDER (NON-GEM)';
+        badge.style.background = isWorkOrder ? '#d1fae5' : '#e0e7ff';
+        badge.style.color = isWorkOrder ? '#065f46' : '#3730a3';
+      }
+
+      // Reference Line
+      const refLine = document.getElementById('prev_doc43_ref_line');
+      if (refLine) {
+        if (isWorkOrder) {
+          refLine.innerHTML = `No. LDCE/<span style="color:#c00000;font-weight:bold;">${dept}</span> /repairing/<span style="font-weight:bold;">${finYear || '2021'}</span>/${refNo}`;
+        } else {
+          refLine.innerHTML = `No. LDCE/Purchase / <span style="font-weight:bold;">${dept}</span> / <span style="color:#c00000;font-weight:bold;">${finYear}</span>`;
+        }
+      }
+
+      // Date Line
+      const dateLine = document.getElementById('prev_doc43_date_line');
+      if (dateLine) {
+        const formattedDate = formatDate(dateVal) || ' &nbsp;&nbsp;/&nbsp;&nbsp;/2021';
+        dateLine.innerHTML = `${isWorkOrder ? 'Date:' : 'Dated:'} <span>${formattedDate}</span>`;
+      }
+
+      // Title
+      const titleEl = document.getElementById('prev_doc43_title_disp');
+      if (titleEl) {
+        titleEl.textContent = isWorkOrder ? 'Work Order' : 'Purchase Order';
+      }
+
+      // Vendor
+      const vendorDisp = document.getElementById('prev_doc43_vendor_disp');
+      if (vendorDisp) {
+        vendorDisp.innerHTML = `${vendorName}<br>${vendorAddress.replace(/\n/g, '<br>')}`;
+      }
+
+      // WO Sub & Ref
+      const woSubRef = document.getElementById('prev_doc43_wo_sub_ref');
+      if (woSubRef) {
+        woSubRef.style.display = isWorkOrder ? 'block' : 'none';
+        const subDisp = document.getElementById('prev_doc43_subject_disp');
+        if (subDisp) subDisp.textContent = subject;
+        const qDateDisp = document.getElementById('prev_doc43_quotation_date_disp');
+        if (qDateDisp) qDateDisp.textContent = quotationDate;
+      }
+
+      // Intro
+      const introDisp = document.getElementById('prev_doc43_intro_disp');
+      if (introDisp) {
+        introDisp.textContent = isWorkOrder
+          ? 'With reference to your quotation mention above the undersigned is pleased to order out the following.'
+          : 'We are pleased to order out the following items for our institute.';
+      }
+
+      // Table Generation
+      const tableEl = document.getElementById('prev_doc43_table');
+      if (tableEl) {
+        let rowsHtml = '';
+        if (isWorkOrder) {
+          // 4-Column Table
+          rowsHtml += `
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="border:1px solid #000;padding:5px 6px;text-align:center;width:55px;">Sr. No.</th>
+                <th style="border:1px solid #000;padding:5px 8px;text-align:left;">Description of repairing</th>
+                <th style="border:1px solid #000;padding:5px 6px;text-align:center;width:75px;">Qty.</th>
+                <th style="border:1px solid #000;padding:5px 8px;text-align:right;width:120px;">Amount in<br>Rs.</th>
+              </tr>
+            </thead>
+            <tbody>
+          `;
+          const displayItems = poFormItems.length > 0 ? poFormItems : [{ item_name: '', qty: '', total_amount: '' }];
+          displayItems.forEach((it, idx) => {
+            rowsHtml += `
+              <tr>
+                <td style="border:1px solid #000;padding:6px;text-align:center;vertical-align:top;">${idx + 1}</td>
+                <td style="border:1px solid #000;padding:6px;vertical-align:top;">${it.item_name || '&nbsp;'}</td>
+                <td style="border:1px solid #000;padding:6px;text-align:center;vertical-align:top;">${it.qty || '&nbsp;'}</td>
+                <td style="border:1px solid #000;padding:6px;text-align:right;vertical-align:top;">${it.total_amount ? parseFloat(it.total_amount).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+            `;
+          });
+          rowsHtml += `
+              <tr>
+                <td colspan="3" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;">Other charges</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;">${otherCharges ? parseFloat(otherCharges).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr>
+                <td colspan="3" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;">GST</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;">${gstAmount ? parseFloat(gstAmount).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr>
+                <td colspan="3" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;font-weight:600;">Grand total</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;font-weight:600;">${grandTotal ? parseFloat(grandTotal).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr style="background:#f8fafc;">
+                <td colspan="3" style="border:1px solid #000;padding:5px 8px;font-weight:bold;">Total Rupees</td>
+                <td style="border:1px solid #000;padding:5px 8px;text-align:right;font-weight:bold;">${grandTotal ? parseFloat(grandTotal).toLocaleString('en-IN') : '0'}</td>
+              </tr>
+            </tbody>
+          `;
+        } else {
+          // 5-Column Table (PO)
+          rowsHtml += `
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="border:1px solid #000;padding:5px 6px;text-align:center;width:50px;">Sr.No.</th>
+                <th style="border:1px solid #000;padding:5px 8px;text-align:left;">Description</th>
+                <th style="border:1px solid #000;padding:5px 8px;text-align:right;width:95px;">Unit Rate</th>
+                <th style="border:1px solid #000;padding:5px 6px;text-align:center;width:65px;">Qty.</th>
+                <th style="border:1px solid #000;padding:5px 8px;text-align:right;width:115px;">Total<br>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+          `;
+          const displayItems = poFormItems.length > 0 ? poFormItems : [{ item_name: '', unit_rate: '', qty: '', total_amount: '' }];
+          displayItems.forEach((it, idx) => {
+            rowsHtml += `
+              <tr>
+                <td style="border:1px solid #000;padding:6px;text-align:center;vertical-align:top;">${idx + 1}</td>
+                <td style="border:1px solid #000;padding:6px;vertical-align:top;">${it.item_name || '&nbsp;'}</td>
+                <td style="border:1px solid #000;padding:6px;text-align:right;vertical-align:top;">${it.unit_rate ? parseFloat(it.unit_rate).toLocaleString('en-IN') : '&nbsp;'}</td>
+                <td style="border:1px solid #000;padding:6px;text-align:center;vertical-align:top;">${it.qty || '&nbsp;'}</td>
+                <td style="border:1px solid #000;padding:6px;text-align:right;vertical-align:top;">${it.total_amount ? parseFloat(it.total_amount).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+            `;
+          });
+          rowsHtml += `
+              <tr>
+                <td colspan="4" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;">Other charges</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;">${otherCharges ? parseFloat(otherCharges).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr>
+                <td colspan="4" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;">GST</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;">${gstAmount ? parseFloat(gstAmount).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr>
+                <td colspan="4" style="border:1px solid #000;padding:4px 8px;font-size:0.82rem;font-weight:600;">Grand total</td>
+                <td style="border:1px solid #000;padding:4px 8px;text-align:right;font-size:0.82rem;font-weight:600;">${grandTotal ? parseFloat(grandTotal).toLocaleString('en-IN') : '&nbsp;'}</td>
+              </tr>
+              <tr style="background:#f8fafc;">
+                <td colspan="4" style="border:1px solid #000;padding:5px 8px;font-weight:bold;">Total Rupees</td>
+                <td style="border:1px solid #000;padding:5px 8px;text-align:right;font-weight:bold;">${grandTotal ? parseFloat(grandTotal).toLocaleString('en-IN') : '0'}</td>
+              </tr>
+            </tbody>
+          `;
+        }
+        tableEl.innerHTML = rowsHtml;
+      }
+
+      // Conditions
+      const condTitle = document.getElementById('prev_doc43_cond_title');
+      const condList = document.getElementById('prev_doc43_cond_list');
+      if (condTitle && condList) {
+        if (isWorkOrder) {
+          condTitle.textContent = 'Conditions:';
+          condList.innerHTML = `
+            <li>The repairing should be done within <span style="color:#c00000;font-weight:bold;">7 days</span> from the date of this order.</li>
+            <li>The parts for repairing should be used of standard quality.</li>
+            <li>The bill should be sent in quadruplicate.</li>
+            <li>Taxes to be pay as per govt. rules.</li>
+            <li>Payment will be done as soon as possible after due scrutiny &amp; Inspection.</li>
+            <li>The undersigned reserves the right to cancel the order or reject the one or all items which may be found of inferior quality or not as per our requirement/suitable to machine. Such items will be sent back to you at your cost.</li>
+          `;
+        } else {
+          condTitle.textContent = 'Terms and Conditions:';
+          condList.innerHTML = `
+            <li>The items should be delivered urgently on receiving this order.</li>
+            <li>The items must be as per specifications mentioned above.</li>
+            <li>Taxes to be pay as per govt. rules.</li>
+            <li>The bill should be sent in quadruplicate.</li>
+            <li>Payment will be done as soon as possible after due scrutiny &amp; Inspection.</li>
+            <li>The undersigned reserves the right to cancel the order or reject one or all items which may be found of inferior quality or not as per our requirement or not as per specifications. Such items will be sent back to you at your cost.</li>
+          `;
+        }
+      }
+
+      // Signatory
+      const signDisp = document.getElementById('prev_doc43_signatory_disp');
+      if (signDisp) signDisp.textContent = signatory;
+    };
+
+    // Listeners for radio switching
+    document.querySelectorAll('input[name="doc43_type_radio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        activePoType = e.target.value;
+        toggleTypeUI();
+      });
+    });
+
+    // Sample loaders
+    document.getElementById('btn_doc43_sample_po')?.addEventListener('click', () => {
+      activePoType = 'purchase_order';
+      if (deptEl) deptEl.value = 'Chemical Engineering';
+      if (finYearEl) finYearEl.value = '2021-22';
+      if (refNoEl) refNoEl.value = '101';
+      if (dateEl) dateEl.value = '2021-03-15';
+      if (vendorNameEl) vendorNameEl.value = 'M/s Ashish Scientific Works';
+      if (vendorAddressEl) vendorAddressEl.value = 'Opp. Kalupur Station, Relief Road, Ahmedabad - 380001';
+      poFormItems = [
+        { item_name: 'Laboratory Glassware (Beakers 500ml, Pipettes, Burettes)', unit_rate: '250', qty: '10 Nos', total_amount: '2500' },
+        { item_name: 'Digital pH Meter Calibration Buffer Solution Kit', unit_rate: '1200', qty: '2 Sets', total_amount: '2400' },
+        { item_name: 'Magnetic Stirrer with Hot Plate (2 Liters Capacity)', unit_rate: '3500', qty: '1 No', total_amount: '3500' }
+      ];
+      if (otherChargesEl) otherChargesEl.value = '150';
+      if (gstAmountEl) gstAmountEl.value = '1539';
+      toggleTypeUI();
+      calculateGrandTotal();
+      updateDoc43Preview();
+    });
+
+    document.getElementById('btn_doc43_sample_wo')?.addEventListener('click', () => {
+      activePoType = 'work_order';
+      if (deptEl) deptEl.value = 'Chemical Engineering';
+      if (finYearEl) finYearEl.value = '2021';
+      if (refNoEl) refNoEl.value = '45';
+      if (dateEl) dateEl.value = '2021-02-28';
+      if (vendorNameEl) vendorNameEl.value = 'M/s Gujarat Scientific Service';
+      if (vendorAddressEl) vendorAddressEl.value = 'Plot No. 12, GIDC Vatva, Ahmedabad - 382445';
+      if (subjectEl) subjectEl.value = 'Heating Mantle (2 Liters)';
+      if (quotationDateEl) quotationDateEl.value = '15/02/2021';
+      poFormItems = [
+        { item_name: 'Replacement of Heating Element & Ceramic Insulation', unit_rate: '', qty: '1 No', total_amount: '2200' },
+        { item_name: 'Replacement of Energy Regulator & Wiring Servicing', unit_rate: '', qty: '1 No', total_amount: '850' }
+      ];
+      if (otherChargesEl) otherChargesEl.value = '0';
+      if (gstAmountEl) gstAmountEl.value = '549';
+      toggleTypeUI();
+      calculateGrandTotal();
+      updateDoc43Preview();
+    });
+
+    // Auto-fill from repair request dropdown
+    autofillEl?.addEventListener('change', (e) => {
+      const repId = e.target.value;
+      if (!repId) return;
+      const r = requests.find(item => String(item.id) === String(repId));
+      if (!r) return;
+
+      activePoType = 'work_order';
+      if (deptEl && r.dept_name) {
+        for (let opt of deptEl.options) {
+          if (opt.value === r.dept_name || opt.text.includes(r.dept_name)) {
+            deptEl.value = opt.value;
+            break;
+          }
+        }
+      }
+      if (subjectEl) subjectEl.value = r.equipment_name || 'Laboratory Equipment';
+      if (refNoEl) refNoEl.value = String(r.id);
+      if (dateEl && !dateEl.value) {
+        dateEl.value = new Date().toISOString().split('T')[0];
+      }
+      if (quotationDateEl && !quotationDateEl.value) {
+        quotationDateEl.value = formatDate(new Date().toISOString().split('T')[0]);
+      }
+      if (r.est_repair_cost) {
+        const est = parseFloat(r.est_repair_cost);
+        poFormItems = [
+          {
+            item_name: `Complete Servicing, Testing & Repairing of ${r.equipment_name || 'Equipment'} (${r.fault_description || 'Fault repair'})`,
+            unit_rate: '',
+            qty: '1 Job',
+            total_amount: (est * 0.8474).toFixed(2) // Base approx
+          }
+        ];
+        if (gstAmountEl) gstAmountEl.value = (est * 0.1526).toFixed(2);
+        if (otherChargesEl) otherChargesEl.value = '0';
+      }
+
+      toggleTypeUI();
+      calculateGrandTotal();
+      updateDoc43Preview();
+    });
+
+    // Input listeners for all form controls
+    [deptEl, finYearEl, refNoEl, dateEl, vendorNameEl, vendorAddressEl, subjectEl, quotationDateEl, signatoryEl].forEach(el => {
+      el?.addEventListener('input', updateDoc43Preview);
+      el?.addEventListener('change', updateDoc43Preview);
+    });
+
+    [otherChargesEl, gstAmountEl].forEach(el => {
+      el?.addEventListener('input', () => {
+        calculateGrandTotal();
+        updateDoc43Preview();
+      });
+    });
+
+    grandTotalEl?.addEventListener('input', (e) => {
+      if (totalWordsEl && e.target.value) {
+        totalWordsEl.value = numToEnglishWords(e.target.value);
+      }
+      updateDoc43Preview();
+    });
+
+    totalWordsEl?.addEventListener('input', updateDoc43Preview);
+
+    // Initial setup
+    renderItemsInputs();
+    toggleTypeUI();
+
+    // Check pre-selection
+    if (window._selectedRepairForDoc43) {
+      if (autofillEl) {
+        autofillEl.value = window._selectedRepairForDoc43;
+        autofillEl.dispatchEvent(new Event('change'));
+      }
+      window._selectedRepairForDoc43 = null;
+    } else {
+      // Default to sample work order or sample PO
+      if (activePoType === 'work_order') {
+        document.getElementById('btn_doc43_sample_wo')?.click();
+      } else {
+        document.getElementById('btn_doc43_sample_po')?.click();
+      }
+    }
+
+    // Form submission
+    document.getElementById('doc43Form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('doc43SubmitBtn');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating DOC-43...';
+
+      const isWorkOrder = activePoType === 'work_order';
+      const payload = {
+        order_type: activePoType,
+        is_work_order: isWorkOrder,
+        dept_name: deptEl?.value || 'Chemical',
+        department: deptEl?.value || 'Chemical',
+        fin_year: finYearEl?.value || (isWorkOrder ? '2021' : '2021-22'),
+        year: finYearEl?.value || '2021',
+        po_number: refNoEl?.value || '101',
+        ref_no: refNoEl?.value || '101',
+        order_date: dateEl?.value || '',
+        vendor_name: vendorNameEl?.value || 'M/s Ashish Scientific Works',
+        vendor_address: vendorAddressEl?.value || '',
+        subject: subjectEl?.value || '',
+        equipment_name: subjectEl?.value || '',
+        quotation_date: quotationDateEl?.value || '',
+        items: poFormItems.map((it, idx) => ({
+          sr_no: idx + 1,
+          item_name: it.item_name || '',
+          description: it.item_name || '',
+          unit_rate: it.unit_rate || '',
+          qty: it.qty || '1',
+          total_amount: it.total_amount || ''
+        })),
+        other_charges: otherChargesEl?.value || '',
+        gst_amount: gstAmountEl?.value || '',
+        grand_total: grandTotalEl?.value || '0',
+        total_amount: grandTotalEl?.value || '0',
+        total_words: totalWordsEl?.value || '',
+        signatory: signatoryEl?.value || 'Principal'
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-43', payload);
+      } catch (err) {
+        alert('Error generating DOC-43 document: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // If in Note for Approval (DOC-45) tab:
+  if (activeRepairsTab === 'doc45') {
+    const deptEl = document.getElementById('doc45_dept');
+    const dateEl = document.getElementById('doc45_date');
+    const eqNameEl = document.getElementById('doc45_eq_name');
+    const costEl = document.getElementById('doc45_cost');
+    const costWordsEl = document.getElementById('doc45_cost_words');
+    const gemEl = document.getElementById('doc45_gem');
+    const reasonEl = document.getElementById('doc45_reason');
+    const budgetHeadEl = document.getElementById('doc45_budget_head');
+    const otherFundEl = document.getElementById('doc45_other_fund');
+    const remarksEl = document.getElementById('doc45_remarks');
+    const autofillEl = document.getElementById('doc45_autofill_eq');
+
+    const updateDoc45Preview = () => {
+      const deptVal = deptEl?.value || 'Library';
+      const prevDept = document.getElementById('prev_doc45_dept');
+      if (prevDept) prevDept.textContent = `${deptVal} ડીપાર્ટમેન્ટ`;
+
+      const prevDeptBody = document.getElementById('prev_doc45_dept_body');
+      if (prevDeptBody) prevDeptBody.textContent = deptVal;
+
+      const dateVal = dateEl?.value;
+      const prevDate = document.getElementById('prev_doc45_date');
+      if (prevDate) {
+        if (dateVal) {
+          const [yyyy, mm, dd] = dateVal.split('-');
+          prevDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevDate.textContent = '...................';
+        }
+      }
+
+      const eqVal = eqNameEl?.value?.trim() || '...................';
+      const prevEq = document.getElementById('prev_doc45_eq');
+      if (prevEq) prevEq.textContent = eqVal;
+
+      const costNum = parseFloat(costEl?.value || 0);
+      const costStr = costNum > 0 ? `₹${costNum.toLocaleString('en-IN')}/-` : '............';
+      const prevCost = document.getElementById('prev_doc45_cost');
+      if (prevCost) prevCost.textContent = costStr;
+
+      const wordsVal = costWordsEl?.value?.trim() || (costNum > 0 ? numToGujaratiWords(costNum) : '.......................................');
+      const prevWords = document.getElementById('prev_doc45_words');
+      if (prevWords) prevWords.textContent = wordsVal;
+
+      const gemVal = gemEl?.value || 'ઉપલબ્ધ નથી.';
+      const prevGem = document.getElementById('prev_doc45_gem');
+      if (prevGem) prevGem.textContent = gemVal;
+
+      const reasonVal = reasonEl?.value?.trim() || '...................................................';
+      const prevReason = document.getElementById('prev_doc45_reason');
+      if (prevReason) prevReason.textContent = reasonVal;
+
+      const bHead = budgetHeadEl?.value || 'Contingency';
+      const headContEl = document.getElementById('prev_doc45_head_cont');
+      const headPlaEl = document.getElementById('prev_doc45_head_pla');
+      if (headContEl) headContEl.innerHTML = bHead === 'Contingency' ? '☑ Contingency' : '☐ Contingency';
+      if (headPlaEl) headPlaEl.innerHTML = bHead === 'PLA' ? '☑ PLA' : '☐ PLA';
+
+      const oFund = otherFundEl?.value?.trim() || '';
+      const prevOtherFund = document.getElementById('prev_doc45_other_fund');
+      if (prevOtherFund) prevOtherFund.textContent = oFund;
+
+      const remVal = remarksEl?.value?.trim() || '';
+      const prevRemarks = document.getElementById('prev_doc45_remarks');
+      if (prevRemarks) prevRemarks.textContent = remVal;
+    };
+
+    // Auto-fill equipment handler
+    const fillDoc45FromEquipment = (reqId) => {
+      const selected = requests.find(r => String(r.id) === String(reqId));
+      if (!selected) return;
+
+      if (deptEl && selected.dept_name) {
+        for (let opt of deptEl.options) {
+          if (opt.value === selected.dept_name || opt.text.includes(selected.dept_name)) {
+            deptEl.value = opt.value;
+            break;
+          }
+        }
+      }
+      if (eqNameEl) eqNameEl.value = selected.equipment_name || '';
+      if (costEl) costEl.value = selected.est_repair_cost || '';
+      if (costWordsEl) costWordsEl.value = numToGujaratiWords(selected.est_repair_cost || 0);
+      if (reasonEl) {
+        reasonEl.value = selected.fault_desc ? `સાધનમાં ખામી: ${selected.fault_desc} (વિદ્યાર્થીઓનાં પ્રેક્ટિકલ કાર્ય અર્થે)` : 'વિદ્યાર્થીઓનાં શૈક્ષણિક તથા પ્રેક્ટિકલ કાર્ય અર્થે';
+      }
+      updateDoc45Preview();
+    };
+
+    if (autofillEl) {
+      autofillEl.addEventListener('change', (e) => {
+        fillDoc45FromEquipment(e.target.value);
+      });
+    }
+
+    // Cost input triggers Gujarati words computation
+    costEl?.addEventListener('input', () => {
+      const amt = parseFloat(costEl.value || 0);
+      if (amt > 0 && costWordsEl) {
+        costWordsEl.value = numToGujaratiWords(amt);
+      }
+      updateDoc45Preview();
+    });
+
+    [deptEl, dateEl, eqNameEl, costWordsEl, gemEl, reasonEl, budgetHeadEl, otherFundEl, remarksEl].forEach(input => {
+      input?.addEventListener('input', updateDoc45Preview);
+      input?.addEventListener('change', updateDoc45Preview);
+    });
+
+    document.getElementById('doc45ResetBtn')?.addEventListener('click', () => {
+      if (eqNameEl) eqNameEl.value = '';
+      if (costEl) costEl.value = '';
+      if (costWordsEl) costWordsEl.value = '';
+      if (reasonEl) reasonEl.value = 'વિદ્યાર્થીઓનાં શૈક્ષણિક તથા પ્રેક્ટિકલ કાર્ય અર્થે';
+      if (otherFundEl) otherFundEl.value = '';
+      if (remarksEl) remarksEl.value = '';
+      updateDoc45Preview();
+    });
+
+    // Handle preselection
+    if (window._selectedRepairForDoc45) {
+      const repId = window._selectedRepairForDoc45;
+      window._selectedRepairForDoc45 = null;
+      if (autofillEl) {
+        autofillEl.value = repId;
+      }
+      fillDoc45FromEquipment(repId);
+    } else if (requests.length > 0) {
+      if (autofillEl) autofillEl.value = requests[0].id;
+      fillDoc45FromEquipment(requests[0].id);
+    } else {
+      updateDoc45Preview();
+    }
+
+    // Form Submit / Download
+    document.getElementById('doc45Form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnDownloadDoc45');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating DOC-45...';
+
+      const payload = {
+        dept_name: deptEl?.value || 'Library',
+        department: deptEl?.value || 'Library',
+        date: dateEl?.value || '',
+        approval_date: dateEl?.value || '',
+        equipment_name: eqNameEl?.value?.trim() || '',
+        item_name: eqNameEl?.value?.trim() || '',
+        est_repair_cost: costEl?.value ? parseFloat(costEl.value) : 0,
+        est_cost_words: costWordsEl?.value?.trim() || '',
+        cost_words: costWordsEl?.value?.trim() || '',
+        gem_available: gemEl?.value || 'ઉપલબ્ધ નથી.',
+        reason: reasonEl?.value?.trim() || '',
+        fault_desc: reasonEl?.value?.trim() || '',
+        budget_head: budgetHeadEl?.value || 'Contingency',
+        other_fund: otherFundEl?.value?.trim() || '',
+        remarks: remarksEl?.value?.trim() || ''
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-45', payload);
+      } catch (err) {
+        alert('Error generating Approval Note: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // If in Note for Work Order (DOC-46) tab:
+  if (activeRepairsTab === 'doc46') {
+    const prevPageEl = document.getElementById('doc46_prev_page');
+    const deptEl = document.getElementById('doc46_dept');
+    const woDateEl = document.getElementById('doc46_wo_date');
+    const eqNameEl = document.getElementById('doc46_eq_name');
+    const lastDateEl = document.getElementById('doc46_last_date');
+    const meetingDateEl = document.getElementById('doc46_meeting_date');
+    const l1VendorEl = document.getElementById('doc46_l1_vendor');
+    const autofillEl = document.getElementById('doc46_autofill_eq');
+
+    const updateDoc46Preview = () => {
+      const pageVal = prevPageEl?.value?.trim() || '૧';
+      const prevPage = document.getElementById('prev_doc46_page');
+      if (prevPage) prevPage.textContent = pageVal;
+
+      const deptVal = deptEl?.value || 'Library';
+      const prevDept = document.getElementById('prev_doc46_dept');
+      if (prevDept) prevDept.textContent = `${deptVal} ડીપાર્ટમેન્ટ`;
+
+      const prevDeptBody = document.getElementById('prev_doc46_dept_body');
+      if (prevDeptBody) prevDeptBody.textContent = deptVal;
+
+      const dateVal = woDateEl?.value;
+      const prevDate = document.getElementById('prev_doc46_date');
+      if (prevDate) {
+        if (dateVal) {
+          const [yyyy, mm, dd] = dateVal.split('-');
+          prevDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevDate.textContent = '...................';
+        }
+      }
+
+      const eqVal = eqNameEl?.value?.trim() || '...................';
+      const prevEq = document.getElementById('prev_doc46_eq');
+      if (prevEq) prevEq.textContent = eqVal;
+
+      const lastD = lastDateEl?.value;
+      const prevLastDate = document.getElementById('prev_doc46_lastdate');
+      if (prevLastDate) {
+        if (lastD) {
+          const [yyyy, mm, dd] = lastD.split('-');
+          prevLastDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevLastDate.textContent = '...................';
+        }
+      }
+
+      const l1Val = l1VendorEl?.value?.trim() || '...........................................';
+      const prevL1 = document.getElementById('prev_doc46_l1');
+      if (prevL1) prevL1.textContent = l1Val;
+
+      const mtgD = meetingDateEl?.value;
+      const prevMtgDate = document.getElementById('prev_doc46_mtgdate');
+      if (prevMtgDate) {
+        if (mtgD) {
+          const [yyyy, mm, dd] = mtgD.split('-');
+          prevMtgDate.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          prevMtgDate.textContent = '...................';
+        }
+      }
+    };
+
+    // Auto-fill equipment handler
+    const fillDoc46FromEquipment = (reqId) => {
+      const selected = requests.find(r => String(r.id) === String(reqId));
+      if (!selected) return;
+
+      if (deptEl && selected.dept_name) {
+        for (let opt of deptEl.options) {
+          if (opt.value === selected.dept_name || opt.text.includes(selected.dept_name)) {
+            deptEl.value = opt.value;
+            break;
+          }
+        }
+      }
+      if (eqNameEl) eqNameEl.value = selected.equipment_name || '';
+      
+      // Default dates
+      if (lastDateEl && !lastDateEl.value) {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        lastDateEl.value = d.toISOString().split('T')[0];
+      }
+      if (meetingDateEl && !meetingDateEl.value) {
+        const d = new Date();
+        d.setDate(d.getDate() - 2);
+        meetingDateEl.value = d.toISOString().split('T')[0];
+      }
+      if (l1VendorEl && !l1VendorEl.value) {
+        l1VendorEl.value = 'M/s AKSH Services, Ahmedabad';
+      }
+
+      updateDoc46Preview();
+    };
+
+    if (autofillEl) {
+      autofillEl.addEventListener('change', (e) => {
+        fillDoc46FromEquipment(e.target.value);
+      });
+    }
+
+    [prevPageEl, deptEl, woDateEl, eqNameEl, lastDateEl, meetingDateEl, l1VendorEl].forEach(input => {
+      input?.addEventListener('input', updateDoc46Preview);
+      input?.addEventListener('change', updateDoc46Preview);
+    });
+
+    document.getElementById('doc46ResetBtn')?.addEventListener('click', () => {
+      if (prevPageEl) prevPageEl.value = '૧';
+      if (eqNameEl) eqNameEl.value = '';
+      if (l1VendorEl) l1VendorEl.value = '';
+      updateDoc46Preview();
+    });
+
+    // Handle preselection
+    if (window._selectedRepairForDoc46) {
+      const repId = window._selectedRepairForDoc46;
+      window._selectedRepairForDoc46 = null;
+      if (autofillEl) {
+        autofillEl.value = repId;
+      }
+      fillDoc46FromEquipment(repId);
+    } else if (requests.length > 0) {
+      if (autofillEl) autofillEl.value = requests[0].id;
+      fillDoc46FromEquipment(requests[0].id);
+    } else {
+      updateDoc46Preview();
+    }
+
+    // Form Submit / Download
+    document.getElementById('doc46Form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnDownloadDoc46');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generating DOC-46...';
+
+      const payload = {
+        prev_page_no: prevPageEl?.value?.trim() || '૧',
+        page_no: prevPageEl?.value?.trim() || '૧',
+        dept_name: deptEl?.value || 'Library',
+        department: deptEl?.value || 'Library',
+        wo_date: woDateEl?.value || '',
+        date: woDateEl?.value || '',
+        equipment_name: eqNameEl?.value?.trim() || '',
+        item_name: eqNameEl?.value?.trim() || '',
+        last_date: lastDateEl?.value || '',
+        l1_vendor: l1VendorEl?.value?.trim() || '',
+        agency_name: l1VendorEl?.value?.trim() || '',
+        meeting_date: meetingDateEl?.value || '',
+        committee_date: meetingDateEl?.value || ''
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-46', payload);
+      } catch (err) {
+        alert('Error generating Work Order Note: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // If in Pass for Payment (DOC-47) tab:
+  if (activeRepairsTab === 'doc47') {
+    const billNoEl = document.getElementById('doc47_bill_no');
+    const billDateEl = document.getElementById('doc47_bill_date');
+    const partyNameEl = document.getElementById('doc47_party_name');
+    const itemDescEl = document.getElementById('doc47_item_desc');
+    const poNoEl = document.getElementById('doc47_po_no');
+    const poDateEl = document.getElementById('doc47_po_date');
+    const deptEl = document.getElementById('doc47_dept');
+    const compDateEl = document.getElementById('doc47_comp_date');
+    const paymentTypeEl = document.getElementById('doc47_payment_type');
+    const budgetHeadEl = document.getElementById('doc47_budget_head');
+    const amountEl = document.getElementById('doc47_amount');
+    const amountWordsEl = document.getElementById('doc47_amount_words');
+    const deductionEl = document.getElementById('doc47_deduction');
+    const deptRegNameEl = document.getElementById('doc47_dept_reg_name');
+    const deptPageNoEl = document.getElementById('doc47_dept_page_no');
+    const deptSrNoEl = document.getElementById('doc47_dept_sr_no');
+    const storeRegNoEl = document.getElementById('doc47_store_reg_no');
+    const storePageNoEl = document.getElementById('doc47_store_page_no');
+    const storeSrNoEl = document.getElementById('doc47_store_sr_no');
+    const agencyNameEl = document.getElementById('doc47_agency_name');
+    const rrLrNoEl = document.getElementById('doc47_rr_lr_no');
+    const rrLrDateEl = document.getElementById('doc47_rr_lr_date');
+    const fittedSparesEl = document.getElementById('doc47_fitted_spares');
+    const cashBillNoEl = document.getElementById('doc47_cash_bill_no');
+    const cashBillDateEl = document.getElementById('doc47_cash_bill_date');
+    const cashAmountEl = document.getElementById('doc47_cash_amount');
+    const cashRecipientEl = document.getElementById('doc47_cash_recipient');
+    const autofillEl = document.getElementById('doc47_autofill_eq');
+
+    const formatDate = (dStr) => {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    const toggleTypeUI = () => {
+      const isNonGeM = activePassForPaymentType === 'non_gem';
+      const grpComp = document.getElementById('grp_comp_date');
+      const grpDeduct = document.getElementById('grp_deduction');
+      const secNonGeM = document.getElementById('sec_non_gem_registers');
+      const secRepair = document.getElementById('sec_repair_specifics');
+      const compRow = document.getElementById('prev_doc47_comp_row');
+
+      if (grpComp) grpComp.style.display = isNonGeM ? 'none' : '';
+      if (grpDeduct) grpDeduct.style.display = isNonGeM ? '' : 'none';
+      if (secNonGeM) secNonGeM.style.display = isNonGeM ? '' : 'none';
+      if (secRepair) secRepair.style.display = isNonGeM ? 'none' : '';
+      if (compRow) compRow.style.display = isNonGeM ? 'none' : '';
+
+      document.querySelectorAll('input[name="doc47_type_radio"]').forEach(radio => {
+        radio.checked = radio.value === activePassForPaymentType;
+        const parent = radio.closest('label');
+        if (parent) {
+          parent.style.borderColor = radio.checked ? 'var(--primary-500,#6366f1)' : 'var(--neutral-700,#444)';
+        }
+      });
+
+      updateDoc47Preview();
+    };
+
+    const updateDoc47Preview = () => {
+      const isNonGeM = activePassForPaymentType === 'non_gem';
+
+      // Badge
+      const badge = document.getElementById('prev_doc47_type_badge');
+      if (badge) {
+        badge.textContent = isNonGeM ? 'NON-GEM PURCHASE' : 'EQUIPMENT REPAIRING';
+        badge.style.color = isNonGeM ? '#2563eb' : '#059669';
+      }
+
+      // 1. Bill no & date & item & party
+      const bNo = billNoEl?.value?.trim() || '16707';
+      const bDate = formatDate(billDateEl?.value) || '10/02/2021';
+      const itDesc = itemDescEl?.value?.trim() || 'Sanitizer, Qty: 19 Bottles (500 ml each)';
+      const pName = partyNameEl?.value?.trim() || 'Chandkheda Medical Store, Ahmedabad';
+
+      const prevBNo = document.getElementById('prev_doc47_bill_no');
+      if (prevBNo) prevBNo.textContent = bNo;
+      const prevBDate = document.getElementById('prev_doc47_bill_date');
+      if (prevBDate) prevBDate.textContent = bDate;
+      const prevItDesc = document.getElementById('prev_doc47_item_desc');
+      if (prevItDesc) prevItDesc.textContent = itDesc;
+      const prevPName = document.getElementById('prev_doc47_party_name');
+      if (prevPName) prevPName.textContent = pName;
+
+      // 2. PO No & Date
+      const poLabel = document.getElementById('prev_doc47_po_label');
+      if (poLabel) poLabel.textContent = isNonGeM ? 'A.T. No./Purchase Order No.' : 'A.T. / Order No.';
+      const poNo = poNoEl?.value?.trim() || 'LDCE/Store/Covid-19/sanitizer';
+      const poDate = formatDate(poDateEl?.value) || '09/02/2021';
+      const prevPoNo = document.getElementById('prev_doc47_po_no');
+      if (prevPoNo) prevPoNo.textContent = poNo;
+      const prevPoDate = document.getElementById('prev_doc47_po_date');
+      if (prevPoDate) prevPoDate.textContent = poDate;
+
+      // 3. Comp date (repair only)
+      const prevCompDate = document.getElementById('prev_doc47_comp_date');
+      if (prevCompDate) prevCompDate.textContent = formatDate(compDateEl?.value) || '05/02/2021';
+
+      // Values for points
+      const dept = deptEl?.value || 'Department';
+      const payType = paymentTypeEl?.value || 'Full';
+      const bHead = budgetHeadEl?.value?.trim() || 'Gymkhana';
+      const amtNum = parseFloat(amountEl?.value || 0);
+      const amtStr = amtNum > 0 ? amtNum.toLocaleString('en-IN') : '0';
+      const amtWords = amountWordsEl?.value?.trim() || (amtNum > 0 ? numToEnglishWords(amtNum) : 'Rupees Zero Only');
+      const deduct = deductionEl?.value?.trim() || 'NIL';
+      const deptReg = deptRegNameEl?.value?.trim() || 'Deadstock / Stationary';
+      const deptPg = deptPageNoEl?.value?.trim() || '12';
+      const deptSr = deptSrNoEl?.value?.trim() || '05';
+      const storeReg = storeRegNoEl?.value?.trim() || '03';
+      const storePg = storePageNoEl?.value?.trim() || '45';
+      const storeSr = storeSrNoEl?.value?.trim() || '18';
+
+      const agency = agencyNameEl?.value?.trim() || '____________________';
+      const rrLr = rrLrNoEl?.value?.trim() || '________';
+      const rrLrDate = formatDate(rrLrDateEl?.value) || '________';
+      const spares = fittedSparesEl?.value?.trim() || '____________________';
+      const cashBill = cashBillNoEl?.value?.trim() || '---';
+      const cashDate = formatDate(cashBillDateEl?.value) || '---';
+      const cashAmt = cashAmountEl?.value ? `Rs. ${parseFloat(cashAmountEl.value).toLocaleString('en-IN')}` : 'Rs. ____';
+      const cashRecip = cashRecipientEl?.value?.trim() || '________';
+
+      // Numbered Points Container
+      const pointsContainer = document.getElementById('prev_doc47_points_container');
+      if (pointsContainer) {
+        if (isNonGeM) {
+          pointsContainer.innerHTML = `
+            <div style="margin-bottom:4px;">1. The procurement has been made according to the Gujarat Govt. G.R.S., norms and guidelines.</div>
+            <div style="margin-bottom:4px;">2. The procurement has been made according to policies and procedures of Govt. of Gujarat.</div>
+            <div style="margin-bottom:4px;">3. Certified that the material received is/are inspected, found satisfactory working condition and in accordance with the specifications of A.T (Purchase order)</div>
+            <div style="margin-bottom:4px;">4. The bill is checked, verified and found correct.</div>
+            <div style="margin-bottom:4px;">5. Certified the charges of GST,Insurance,Fright,Packing and forwarding etc. are admissible.</div>
+            <div style="margin-bottom:4px;line-height:1.6;">6. Certified that the all materials of this bill have been correctly entered in <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${dept}</span> department <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${deptReg}</span> register on page no <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${deptPg}</span> at Sr No <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${deptSr}</span>.</div>
+            <div style="margin-bottom:4px;">7. This is <strong>${payType}</strong> / Part payment.</div>
+            <div style="margin-bottom:4px;">8. The amount relating to the above said bill passed as below has not been passed before.</div>
+            <div style="margin-bottom:4px;">9. The budget head is <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${bHead}</span></div>
+            <div style="margin-bottom:4px;">10. Certified that the amount deducted from the above bill is <span style="color:#dc2626;font-weight:700;">${deduct}</span></div>
+            <div style="margin-bottom:4px;font-size:0.96rem;">11. Recommended for payment of <strong style="color:#dc2626;">Rs.${amtStr}/- (${amtWords})</strong></div>
+          `;
+        } else {
+          pointsContainer.innerHTML = `
+            <div style="margin-bottom:4px;">1. &nbsp;This is a laboring/ loading/ unloading/ carting/ service/ repairing/ printing charge of <span style="color:#dc2626;font-weight:700;">Laboratory Equipment Repairing and Maintenance of ${dept} Dept.</span></div>
+            <div style="margin-bottom:4px;">2. &nbsp;The purchase process of Laboratory Equipment Repairing and Maintenance of ${dept} Dept. has been made according to the Gujarat Govt. G.R.S., norms and guidelines.</div>
+            <div style="margin-bottom:4px;">3. &nbsp;The purchase process of laboring/ loading/ unloading/ carting/ service/ repairing/ printing has been made according to policies and procedures of Govt. of Gujarat.</div>
+            <div style="margin-bottom:4px;">4. &nbsp;This is a cash receipt for clearing the parcel from M/S. <span style="text-decoration:underline;">${agency}</span>. The parcel has been cleared RR/LR No. <span style="text-decoration:underline;">${rrLr}</span> Date <span style="text-decoration:underline;">${rrLrDate}</span></div>
+            <div style="margin-bottom:4px;">5. &nbsp;The spares are fitted in <span style="text-decoration:underline;">${spares}</span> and work has been done satisfactory.</div>
+            <div style="margin-bottom:4px;">6. &nbsp;The above work has been done satisfactory as per our order and permission was taken form the Principal</div>
+            <div style="margin-bottom:4px;">7. &nbsp;Items included in this bill are approved by the Principal</div>
+            <div style="margin-bottom:4px;">8. &nbsp;The amount of cash memo/Bill No. <span style="text-decoration:underline;">${cashBill}</span> date <span style="text-decoration:underline;">${cashDate}</span> of <span style="text-decoration:underline;">${cashAmt}</span> has been paid cash and hence same may be given to <span style="text-decoration:underline;">${cashRecip}</span></div>
+            <div style="margin-bottom:4px;">9. &nbsp;The rate seems to be reasonable.</div>
+            <div style="margin-bottom:4px;">10. This is <strong>${payType}</strong> / Part /Remaining payment.</div>
+            <div style="margin-bottom:4px;">11. The amount relating to the above said bill passed as below has not been passed before.</div>
+            <div style="margin-bottom:4px;">12. The budget head is <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${bHead}</span></div>
+            <div style="margin-top:6px;margin-bottom:4px;font-size:0.96rem;padding-left:1.5rem;">Recommended for payment of <strong style="color:#dc2626;">Rs.${amtStr}/- (${amtWords})</strong></div>
+          `;
+        }
+      }
+
+      // Department Signatures
+      const deptSigsContainer = document.getElementById('prev_doc47_dept_sigs_container');
+      if (deptSigsContainer) {
+        if (isNonGeM) {
+          deptSigsContainer.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:0.92rem;font-weight:700;color:#000;line-height:1.3;">
+              <div>Lab Assi / Office Clerk</div>
+              <div style="text-align:center;">Lab Incharge / Office In charge</div>
+              <div style="text-align:right;">
+                <div>Head of the Dept.</div>
+                <div style="margin-top:0.75rem;">Officer in Charge</div>
+                <div>Admin Officer</div>
+              </div>
+            </div>
+          `;
+        } else {
+          deptSigsContainer.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:0.9rem;font-weight:700;color:#000;line-height:1.3;">
+              <div>Lab Assi /Office clerk</div>
+              <div style="text-align:center;">Lab /Office in charge</div>
+              <div style="text-align:center;">Store Officer</div>
+              <div style="text-align:right;">
+                <div>Head of Department</div>
+                <div>Officer in charge</div>
+                <div>Admin Officer</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Bottom Container: Store + Account (Non-GeM) OR Office Use (Repair)
+      const bottomContainer = document.getElementById('prev_doc47_bottom_container');
+      if (bottomContainer) {
+        if (isNonGeM) {
+          bottomContainer.innerHTML = `
+            <!-- For Store use only -->
+            <div style="font-size:0.95rem;margin-bottom:1rem;color:#000;">
+              <div style="margin-bottom:0.75rem;">(For Store use only)</div>
+              <div style="line-height:1.6;">
+                Entered in General purchase Register No.<span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${storeReg}</span> on page No. <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${storePg}</span> at Sr No. <span style="border-bottom:1px dotted #dc2626;color:#dc2626;font-weight:700;padding:0 4px;">${storeSr}</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.92rem;font-weight:700;margin-top:2.5rem;margin-bottom:1.5rem;color:#000;">
+              <div>Store Keeper</div>
+              <div>Store Officer</div>
+            </div>
+
+            <!-- DASHED SEPARATOR LINE -->
+            <div style="border-top:1.5px dashed #000;margin:1.5rem 0;"></div>
+
+            <!-- For Account use only -->
+            <div style="font-size:0.95rem;margin-bottom:1rem;color:#000;">
+              <div style="margin-bottom:0.75rem;">(For Account use only)</div>
+              <div>
+                Passed for payment of <strong style="color:#dc2626;">Rs.${amtStr}/- (${amtWords})</strong>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:0.95rem;font-weight:700;margin-top:3rem;margin-bottom:0.5rem;color:#000;">
+              <div>Account Officer</div>
+              <div>Principal</div>
+            </div>
+          `;
+        } else {
+          bottomContainer.innerHTML = `
+            <!-- (FOR OFFICE USE) -->
+            <div style="text-align:center;font-weight:700;text-decoration:underline;font-size:1.05rem;margin-bottom:1.5rem;color:#000;">
+              (FOR OFFICE USE)
+            </div>
+            <div style="font-size:0.95rem;margin-bottom:2.5rem;color:#000;">
+              Passed for payment of <strong style="color:#dc2626;">Rs. ${amtStr}/- (${amtWords})</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:0.95rem;font-weight:700;margin-top:3rem;margin-bottom:0.5rem;color:#000;">
+              <div>Account Officer.</div>
+              <div>Principal</div>
+            </div>
+          `;
+        }
+      }
+    };
+
+    // Radios change listener
+    document.querySelectorAll('input[name="doc47_type_radio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        activePassForPaymentType = e.target.value;
+        toggleTypeUI();
+      });
+    });
+
+    // Quick fill Sanitizer Purchase example
+    document.getElementById('btnLoadSanitizerExample')?.addEventListener('click', () => {
+      activePassForPaymentType = 'non_gem';
+      if (billNoEl) billNoEl.value = '16707';
+      if (billDateEl) billDateEl.value = '2021-02-10';
+      if (partyNameEl) partyNameEl.value = 'Chandkheda Medical Store, Ahmedabad';
+      if (itemDescEl) itemDescEl.value = 'Sanitizer, Qty: 19 Bottles (500 ml each)';
+      if (poNoEl) poNoEl.value = 'LDCE/Store/Covid-19/sanitizer';
+      if (poDateEl) poDateEl.value = '2021-02-09';
+      if (budgetHeadEl) budgetHeadEl.value = 'Gymkhana';
+      if (amountEl) amountEl.value = '3750';
+      if (amountWordsEl) amountWordsEl.value = 'Rupees Three Thousand Seven Hundred Fifty Only';
+      if (deductionEl) deductionEl.value = 'NIL';
+      if (deptRegNameEl) deptRegNameEl.value = 'Deadstock / Stationary';
+      if (deptPageNoEl) deptPageNoEl.value = '12';
+      if (deptSrNoEl) deptSrNoEl.value = '05';
+      if (storeRegNoEl) storeRegNoEl.value = '03';
+      if (storePageNoEl) storePageNoEl.value = '45';
+      if (storeSrNoEl) storeSrNoEl.value = '18';
+      toggleTypeUI();
+    });
+
+    // Quick fill Copier Repair example
+    document.getElementById('btnLoadRepairPassExample')?.addEventListener('click', () => {
+      activePassForPaymentType = 'repair';
+      if (billNoEl) billNoEl.value = '554';
+      if (billDateEl) billDateEl.value = '2026-08-25';
+      if (partyNameEl) partyNameEl.value = 'AKSH Services, Ahmedabad';
+      if (itemDescEl) itemDescEl.value = 'Canon IR 2002 Copier machine';
+      if (poNoEl) poNoEl.value = 'LDCE/Store/Repair/2026/104';
+      if (poDateEl) poDateEl.value = '2026-08-15';
+      if (compDateEl) compDateEl.value = '2026-08-10';
+      if (budgetHeadEl) budgetHeadEl.value = 'Gymkhana / Contingency';
+      if (amountEl) amountEl.value = '2950';
+      if (amountWordsEl) amountWordsEl.value = 'Rupees Two Thousand Nine Hundred Fifty Only';
+      toggleTypeUI();
+    });
+
+    // Auto-fill from repair equipment
+    const fillDoc47FromEquipment = (reqId) => {
+      const selected = requests.find(r => String(r.id) === String(reqId));
+      if (!selected) return;
+
+      activePassForPaymentType = 'repair';
+      if (deptEl && selected.dept_name) {
+        for (let opt of deptEl.options) {
+          if (opt.value === selected.dept_name || opt.text.includes(selected.dept_name)) {
+            deptEl.value = opt.value;
+            break;
+          }
+        }
+      }
+      if (itemDescEl) itemDescEl.value = selected.equipment_name || '';
+      if (poNoEl) poNoEl.value = `LDCE/Store/Repair/${new Date().getFullYear()}/${selected.id}`;
+      if (poDateEl) poDateEl.value = new Date().toISOString().split('T')[0];
+      if (partyNameEl) partyNameEl.value = 'M/s AKSH Services, Ahmedabad';
+      if (amountEl) amountEl.value = selected.est_repair_cost || 2950;
+      if (amountWordsEl) amountWordsEl.value = numToEnglishWords(selected.est_repair_cost || 2950);
+      toggleTypeUI();
+    };
+
+    if (autofillEl) {
+      autofillEl.addEventListener('change', (e) => {
+        fillDoc47FromEquipment(e.target.value);
+      });
+    }
+
+    // Input listeners for preview synchronization
+    amountEl?.addEventListener('input', () => {
+      const amt = parseFloat(amountEl.value || 0);
+      if (amt > 0 && amountWordsEl) {
+        amountWordsEl.value = numToEnglishWords(amt);
+      }
+      updateDoc47Preview();
+    });
+
+    [
+      billNoEl, billDateEl, partyNameEl, itemDescEl, poNoEl, poDateEl, deptEl, compDateEl,
+      paymentTypeEl, budgetHeadEl, amountWordsEl, deductionEl, deptRegNameEl, deptPageNoEl,
+      deptSrNoEl, storeRegNoEl, storePageNoEl, storeSrNoEl, agencyNameEl, rrLrNoEl,
+      rrLrDateEl, fittedSparesEl, cashBillNoEl, cashBillDateEl, cashAmountEl, cashRecipientEl
+    ].forEach(input => {
+      input?.addEventListener('input', updateDoc47Preview);
+      input?.addEventListener('change', updateDoc47Preview);
+    });
+
+    document.getElementById('doc47ResetBtn')?.addEventListener('click', () => {
+      if (billNoEl) billNoEl.value = '';
+      if (partyNameEl) partyNameEl.value = '';
+      if (itemDescEl) itemDescEl.value = '';
+      if (poNoEl) poNoEl.value = '';
+      if (amountEl) amountEl.value = '';
+      if (amountWordsEl) amountWordsEl.value = '';
+      updateDoc47Preview();
+    });
+
+    // Handle preselection
+    if (window._selectedRepairForDoc47) {
+      const repId = window._selectedRepairForDoc47;
+      window._selectedRepairForDoc47 = null;
+      if (autofillEl) autofillEl.value = repId;
+      fillDoc47FromEquipment(repId);
+    } else {
+      toggleTypeUI();
+    }
+
+    // Form Submit / Download
+    document.getElementById('doc47Form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnDownloadDoc47');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Generating DOC-47...';
+
+      const amtNum = parseFloat(amountEl?.value || 0);
+      const payload = {
+        pass_type: activePassForPaymentType,
+        type: activePassForPaymentType,
+        bill_no: billNoEl?.value?.trim() || '',
+        bill_date: billDateEl?.value || '',
+        item_desc: itemDescEl?.value?.trim() || '',
+        equipment_name: itemDescEl?.value?.trim() || '',
+        party_name: partyNameEl?.value?.trim() || '',
+        po_no: poNoEl?.value?.trim() || '',
+        po_date: poDateEl?.value || '',
+        order_no: poNoEl?.value?.trim() || '',
+        order_date: poDateEl?.value || '',
+        comp_date: compDateEl?.value || '',
+        dept_name: deptEl?.value || 'Department',
+        department: deptEl?.value || 'Department',
+        payment_type: paymentTypeEl?.value || 'Full',
+        budget_head: budgetHeadEl?.value?.trim() || 'Gymkhana',
+        amount: amtNum,
+        amount_in_words: amountWordsEl?.value?.trim() || numToEnglishWords(amtNum),
+        deduction: deductionEl?.value?.trim() || 'NIL',
+        dept_register_name: deptRegNameEl?.value?.trim() || '',
+        dept_page_no: deptPageNoEl?.value?.trim() || '',
+        dept_sr_no: deptSrNoEl?.value?.trim() || '',
+        store_reg_no: storeRegNoEl?.value?.trim() || '',
+        store_page_no: storePageNoEl?.value?.trim() || '',
+        store_sr_no: storeSrNoEl?.value?.trim() || '',
+        agency_name: agencyNameEl?.value?.trim() || '',
+        rr_lr_no: rrLrNoEl?.value?.trim() || '',
+        rr_lr_date: rrLrDateEl?.value || '',
+        fitted_eq: fittedSparesEl?.value?.trim() || '',
+        cash_bill_no: cashBillNoEl?.value?.trim() || '',
+        cash_bill_date: cashBillDateEl?.value || '',
+        cash_amount: cashAmountEl?.value ? parseFloat(cashAmountEl.value) : '',
+        cash_recipient: cashRecipientEl?.value?.trim() || ''
+      };
+
+      try {
+        await api.downloadDocumentPost('DOC-47', payload);
+      } catch (err) {
+        alert('Error generating Pass for Payment Certificate: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    });
+
+    return;
+  }
+
+  // Register Tab Events
   const prevRepairedEl = document.getElementById('repairPrevRepaired');
   const grpDate = document.getElementById('grpLastRepairDate');
   const grpAmt = document.getElementById('grpLastRepairAmount');
@@ -5721,7 +9264,6 @@ function bindRepairsEvents() {
     prevRepairedEl.addEventListener('change', togglePrevFields);
   }
 
-  // Reset button re-toggles conditional fields
   document.getElementById('repairResetBtn')?.addEventListener('click', () => {
     setTimeout(() => {
       if (grpDate) grpDate.style.display = 'none';
@@ -5733,24 +9275,24 @@ function bindRepairsEvents() {
     e.preventDefault();
     const prevRepaired = document.getElementById('repairPrevRepaired')?.value === 'Yes';
     const payload = {
-      dept_id:            document.getElementById('repairDept')?.value,
-      equipment_name:     document.getElementById('repairName')?.value.trim(),
-      purchase_date:      document.getElementById('repairPurchaseDate')?.value,
-      original_cost:      document.getElementById('repairCost')?.value,
-      breakdown_date:     document.getElementById('repairDate')?.value,
-      prev_repaired:      prevRepaired,
-      last_repair_date:   prevRepaired ? (document.getElementById('repairLastRepairDate')?.value || null) : null,
+      dept_id: document.getElementById('repairDept')?.value,
+      equipment_name: document.getElementById('repairName')?.value.trim(),
+      purchase_date: document.getElementById('repairPurchaseDate')?.value,
+      original_cost: document.getElementById('repairCost')?.value,
+      breakdown_date: document.getElementById('repairDate')?.value,
+      prev_repaired: prevRepaired,
+      last_repair_date: prevRepaired ? (document.getElementById('repairLastRepairDate')?.value || null) : null,
       last_repair_amount: prevRepaired ? (document.getElementById('repairLastRepairAmount')?.value || null) : null,
-      market_value:       document.getElementById('repairMarketValue')?.value,
-      est_repair_cost:    document.getElementById('repairEst')?.value,
-      fault_desc:         document.getElementById('repairDesc')?.value.trim(),
-      last_repair_info:   prevRepaired
+      market_value: document.getElementById('repairMarketValue')?.value,
+      est_repair_cost: document.getElementById('repairEst')?.value,
+      fault_desc: document.getElementById('repairDesc')?.value.trim(),
+      last_repair_info: prevRepaired
         ? `Dt: ${document.getElementById('repairLastRepairDate')?.value || '-'}, Amt: ₹${document.getElementById('repairLastRepairAmount')?.value || '0'}`
         : ''
     };
     try {
       await api.createRepair(payload);
-      alert('Equipment registered in Repair Register! Generate DOC-44/45/46 from Document Centre.');
+      alert('Equipment registered in Repair Register! You can now generate an Inquiry Letter (DOC-41).');
       router();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -5817,36 +9359,36 @@ function renderTemplatesView() {
 function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = [], vouchers = [], repairs = [], fi = [] } = {}) {
   // Option builders
   const indentOpts = indents.length
-    ? indents.map(i => `<option value="${i.id}">#${i.id} – ${(i.item_name||'').substring(0,40)} [${i.dept_code||i.dept_name||''}]</option>`).join('')
+    ? indents.map(i => `<option value="${i.id}">#${i.id} – ${(i.item_name || '').substring(0, 40)} [${i.dept_code || i.dept_name || ''}]</option>`).join('')
     : '<option value="">— No Indents Found —</option>';
   const bidOpts = bids.length
-    ? bids.map(b => `<option value="${b.id}">#${b.id} – ${b.bid_no||''}</option>`).join('')
+    ? bids.map(b => `<option value="${b.id}">#${b.id} – ${b.bid_no || ''}</option>`).join('')
     : '<option value="">— No Bids Found —</option>';
   const dlpcMeetings = meetings.filter(m => (m.committee_type || '').toUpperCase() === 'DLPC');
   const dpcMeetings = meetings.filter(m => (m.committee_type || '').toUpperCase() === 'DPC');
 
   const dlpcMeetingOpts = dlpcMeetings.length
-    ? dlpcMeetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type||'DLPC'} | ${m.meeting_ref||''}</option>`).join('')
+    ? dlpcMeetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type || 'DLPC'} | ${m.meeting_ref || ''}</option>`).join('')
     : '<option value="">— No DLPC Meetings Found —</option>';
 
   const dpcMeetingOpts = dpcMeetings.length
-    ? dpcMeetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type||'DPC'} | ${m.meeting_ref||''}</option>`).join('')
+    ? dpcMeetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type || 'DPC'} | ${m.meeting_ref || ''}</option>`).join('')
     : '<option value="">— No DPC Meetings Found —</option>';
 
   const meetingOpts = meetings.length
-    ? meetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type||''} | ${m.meeting_ref||''}</option>`).join('')
+    ? meetings.map(m => `<option value="${m.id}">#${m.id} – ${m.committee_type || ''} | ${m.meeting_ref || ''}</option>`).join('')
     : '<option value="">— No Meetings Found —</option>';
   const orderOpts = orders.length
-    ? orders.map(o => `<option value="${o.id}">#${o.id} – ${o.order_no||''} | ${(o.item_name||'').substring(0,30)}</option>`).join('')
+    ? orders.map(o => `<option value="${o.id}">#${o.id} – ${o.order_no || ''} | ${(o.item_name || '').substring(0, 30)}</option>`).join('')
     : '<option value="">— No Orders Found —</option>';
   const voucherOpts = vouchers.length
-    ? vouchers.map(v => `<option value="${v.id}">#${v.id} – ${v.voucher_no||''}</option>`).join('')
+    ? vouchers.map(v => `<option value="${v.id}">#${v.id} – ${v.voucher_no || ''}</option>`).join('')
     : '<option value="">— No Vouchers Found —</option>';
   const repairOpts = repairs.length
-    ? repairs.map(r => `<option value="${r.id}">#${r.id} – ${(r.equipment_name||'').substring(0,35)} [${r.dept_name||''}]</option>`).join('')
+    ? repairs.map(r => `<option value="${r.id}">#${r.id} – ${(r.equipment_name || '').substring(0, 35)} [${r.dept_name || ''}]</option>`).join('')
     : '<option value="">— No Repairs Found —</option>';
   const fiOpts = fi.length
-    ? fi.map(f => `<option value="${f.id}">#${f.id} – ${f.vendor_name||''} | ${f.dd_number||''}</option>`).join('')
+    ? fi.map(f => `<option value="${f.id}">#${f.id} – ${f.vendor_name || ''} | ${f.dd_number || ''}</option>`).join('')
     : '<option value="">— No EMD Records Found —</option>';
 
   function phaseCard(phaseNum, phaseName, phaseColor, docs) {
@@ -5868,9 +9410,9 @@ function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = 
     `;
   }
 
-  function docCard({ docId, name, selector, note }) {
+  function docCard({ docId, name, selector, note, isEditable: customEditable }) {
     const isDualFormat = ['DOC-01', 'DOC-02', 'DOC-03', 'DOC-04', 'DOC-05', 'DOC-06', 'DOC-07', 'DOC-34'].includes(docId);
-    const isEditable = ['DOC-25', 'DOC-25A', 'DOC-32', 'DOC-36', 'DOC-37', 'DOC-38', 'DOC-39'].includes(docId);
+    const isEditable = customEditable || ['DOC-25', 'DOC-25A', 'DOC-32', 'DOC-36', 'DOC-37', 'DOC-38', 'DOC-39', 'DOC-41', 'DOC-42'].includes(docId);
 
     let actionBtns = '';
     if (isDualFormat) {
@@ -5968,72 +9510,72 @@ function renderDocumentsView({ indents = [], bids = [], meetings = [], orders = 
     </div>
 
     ${phaseCard(1, 'Committee & Governance Setup', '#8B5CF6', [
-      { docId:'DOC-08', name:'Office Order – Dept. Representatives', note:'Lists 2 reps per department for 2026-27', selector: yearSel('yr-08') },
-      { docId:'DOC-09', name:'Office Order – Expert Committees', note:'Discipline-wise expert panel orders', selector: yearSel('yr-09') },
-      { docId:'DOC-10', name:'Office Order – Special Committees (DLPC/DPC)', note:'Select committee type', selector:`<select id="ct-10" class="form-control" style="font-size:0.8rem;padding:5px;background:var(--neutral-800);color:var(--neutral-100);border:1px solid var(--neutral-600);border-radius:5px;width:100%;"><option value="DLPC">DLPC</option><option value="DPC">DPC</option><option value="WriteOff">Write-off Committee</option></select>` },
-      { docId:'DOC-11', name:'Note for Change in Committee / Representatives', note:'Fills generic change note' },
-    ])}
+    { docId: 'DOC-08', name: 'Office Order – Dept. Representatives', note: 'Lists 2 reps per department for 2026-27', selector: yearSel('yr-08') },
+    { docId: 'DOC-09', name: 'Office Order – Expert Committees', note: 'Discipline-wise expert panel orders', selector: yearSel('yr-09') },
+    { docId: 'DOC-10', name: 'Office Order – Special Committees (DLPC/DPC)', note: 'Select committee type', selector: `<select id="ct-10" class="form-control" style="font-size:0.8rem;padding:5px;background:var(--neutral-800);color:var(--neutral-100);border:1px solid var(--neutral-600);border-radius:5px;width:100%;"><option value="DLPC">DLPC</option><option value="DPC">DPC</option><option value="WriteOff">Write-off Committee</option></select>` },
+    { docId: 'DOC-11', name: 'Note for Change in Committee / Representatives', note: 'Fills generic change note' },
+  ])}
 
     ${phaseCard(2, 'Annual CTE Demand Statements', '#0EA5E9', [
-      { docId:'DOC-01', name:'Statement 1 – Non-IT Equipment', selector: yearSel('yr-01') },
-      { docId:'DOC-02', name:'Statement 2 – IT Equipment', selector: yearSel('yr-02') },
-      { docId:'DOC-03', name:'Statement 3 – Furniture', selector: yearSel('yr-03') },
-      { docId:'DOC-04', name:'Statement 4 – Books & Periodicals', selector: yearSel('yr-04') },
-      { docId:'DOC-05', name:'Statement 5 – Maintenance & AMC', selector: yearSel('yr-05') },
-      { docId:'DOC-06', name:'Summary of IT Items (All Depts)', selector: yearSel('yr-06') },
-      { docId:'DOC-07', name:'CTE Consolidated Summary', selector: yearSel('yr-07') },
-    ])}
+    { docId: 'DOC-01', name: 'Statement 1 – Non-IT Equipment', selector: yearSel('yr-01') },
+    { docId: 'DOC-02', name: 'Statement 2 – IT Equipment', selector: yearSel('yr-02') },
+    { docId: 'DOC-03', name: 'Statement 3 – Furniture', selector: yearSel('yr-03') },
+    { docId: 'DOC-04', name: 'Statement 4 – Books & Periodicals', selector: yearSel('yr-04') },
+    { docId: 'DOC-05', name: 'Statement 5 – Maintenance & AMC', selector: yearSel('yr-05') },
+    { docId: 'DOC-06', name: 'Summary of IT Items (All Depts)', selector: yearSel('yr-06') },
+    { docId: 'DOC-07', name: 'CTE Consolidated Summary', selector: yearSel('yr-07') },
+  ])}
 
     ${phaseCard(3, 'Purchase Indent, Specs, ATC & Note Sheet', '#10B981', [
-      { docId:'DOC-12', name:'Purchase Indent – Govt. Fund', note:'Select the indent', selector: sel('ind-12', indentOpts, 'Select Indent') },
-      { docId:'DOC-13', name:'Purchase Indent – Non-Govt. Fund', note:'Select the indent', selector: sel('ind-13', indentOpts, 'Select Indent') },
-      { docId:'DOC-14', name:'Specification Sheet', note:'Select the indent', selector: sel('ind-14', indentOpts, 'Select Indent') },
-      { docId:'DOC-15', name:'Additional Terms & Conditions (ATC)', note:'Select the indent', selector: sel('ind-15', indentOpts, 'Select Indent') },
-      { docId:'DOC-16', name:'General GeM Guidelines Sheet', note:'Standard guidelines' },
-      { docId:'DOC-17', name:'Note for Purchase – New Item (Gujarati)', note:'Select the indent', selector: sel('ind-17', indentOpts, 'Select Indent') },
-      { docId:'DOC-18', name:'Note for Purchase – Other Items', note:'Select the indent', selector: sel('ind-18', indentOpts, 'Select Indent') },
-      { docId:'DOC-19', name:'Checklist A – Before Initiating GeM Bid', note:'Select the indent', selector: sel('ind-19', indentOpts, 'Select Indent') },
-      { docId:'DOC-20', name:'Checklist C – Before Publishing Custom Bid/BOQ', note:'Select the indent', selector: sel('ind-20', indentOpts, 'Select Indent') },
-    ])}
+    { docId: 'DOC-12', name: 'Purchase Indent – Govt. Fund', note: 'Select the indent', selector: sel('ind-12', indentOpts, 'Select Indent') },
+    { docId: 'DOC-13', name: 'Purchase Indent – Non-Govt. Fund', note: 'Select the indent', selector: sel('ind-13', indentOpts, 'Select Indent') },
+    { docId: 'DOC-14', name: 'Specification Sheet', note: 'Select the indent', selector: sel('ind-14', indentOpts, 'Select Indent') },
+    { docId: 'DOC-15', name: 'Additional Terms & Conditions (ATC)', note: 'Select the indent', selector: sel('ind-15', indentOpts, 'Select Indent') },
+    { docId: 'DOC-16', name: 'General GeM Guidelines Sheet', note: 'Standard guidelines' },
+    { docId: 'DOC-17', name: 'Note for Purchase – New Item (Gujarati)', note: 'Select the indent', selector: sel('ind-17', indentOpts, 'Select Indent') },
+    { docId: 'DOC-18', name: 'Note for Purchase – Other Items', note: 'Select the indent', selector: sel('ind-18', indentOpts, 'Select Indent') },
+    { docId: 'DOC-19', name: 'Checklist A – Before Initiating GeM Bid', note: 'Select the indent', selector: sel('ind-19', indentOpts, 'Select Indent') },
+    { docId: 'DOC-20', name: 'Checklist C – Before Publishing Custom Bid/BOQ', note: 'Select the indent', selector: sel('ind-20', indentOpts, 'Select Indent') },
+  ])}
 
     ${phaseCard(4, 'EMD & Security Deposit (e-PBG) Ledger', '#F59E0B', [
-      { docId:'DOC-21', name:'EMD Refund Letter to Unsuccessful Bidder', note:'Select the EMD/e-PBG record', selector: sel('fi-21', fiOpts, 'Select EMD Record') },
-      { docId:'DOC-22', name:'Note for Security Deposit Submission to Accounts', note:'Select the EMD/e-PBG record', selector: sel('fi-22', fiOpts, 'Select EMD Record') },
-    ])}
+    { docId: 'DOC-21', name: 'EMD Refund Letter to Unsuccessful Bidder', note: 'Select the EMD/e-PBG record', selector: sel('fi-21', fiOpts, 'Select EMD Record') },
+    { docId: 'DOC-22', name: 'Note for Security Deposit Submission to Accounts', note: 'Select the EMD/e-PBG record', selector: sel('fi-22', fiOpts, 'Select EMD Record') },
+  ])}
 
     ${phaseCard(5, 'Technical Scrutiny & Committee Approval', '#EF4444', [
-      { docId:'DOC-23', name:'Bid Scrutiny Report (Evaluation Matrix)', note:'Select the bid', selector: sel('bid-23', bidOpts, 'Select Bid') },
-      { docId:'DOC-24', name:'Reasons for Disqualification Sheet', note:'Select the bid', selector: sel('bid-24', bidOpts, 'Select Bid') },
-      { docId:'DOC-25', name:'DLPC Agenda & Proposal (3-Page Checklist Format)', note:'Select the DLPC meeting', selector: sel('mtg-25', dlpcMeetingOpts, 'Select DLPC Meeting') },
-      { docId:'DOC-25A', name:'GeM Agenda Format – DLPC (9-Point Official Table)', note:'Select the DLPC meeting', selector: sel('mtg-25a', dlpcMeetingOpts, 'Select DLPC Meeting') },
-      { docId:'DOC-26', name:'Certificate for reasonability of rate (DLPC & DPC)', note:'Select the committee meeting', selector: sel('mtg-26', meetingOpts, 'Select Meeting') },
-      { docId:'DOC-27', name:'DLPC Minutes of Meeting (MOM)', note:'Select the DLPC meeting', selector: sel('mtg-27', dlpcMeetingOpts, 'Select DLPC Meeting') },
-      { docId:'DOC-28', name:'Checklist B – Final Approval Package', note:'Select the DLPC meeting', selector: sel('mtg-28', dlpcMeetingOpts, 'Select DLPC Meeting') },
-      { docId:'DOC-29', name:'Note – Direct Purchase Against Bid (DLPC)', note:'Select the DLPC meeting', selector: sel('mtg-29', dlpcMeetingOpts, 'Select DLPC Meeting') },
-      { docId:'DOC-30', name:'DPC Proposal Document Index', note:'Select the DPC meeting', selector: sel('mtg-30', dpcMeetingOpts, 'Select DPC Meeting') },
-      { docId:'DOC-31', name:'DPC Forwarding Letter to Directorate', note:'Select the DPC meeting', selector: sel('mtg-31', dpcMeetingOpts, 'Select DPC Meeting') },
-      { docId:'DOC-32', name:'GeM Agenda Format – DPC', note:'Select the DPC meeting', selector: sel('mtg-32', dpcMeetingOpts, 'Select DPC Meeting') },
-      { docId:'DOC-33', name:'Institute BID Certificate', note:'Select the DPC meeting', selector: sel('mtg-33', dpcMeetingOpts, 'Select DPC Meeting') },
-      { docId:'DOC-34', name:'L1 INFO Sheet for DPC', note:'Select the DPC meeting', selector: sel('mtg-34', dpcMeetingOpts, 'Select DPC Meeting') },
-    ])}
+    { docId: 'DOC-23', name: 'Bid Scrutiny Report (Evaluation Matrix)', note: 'Select the bid', selector: sel('bid-23', bidOpts, 'Select Bid') },
+    { docId: 'DOC-24', name: 'Reasons for Disqualification Sheet', note: 'Select the bid', selector: sel('bid-24', bidOpts, 'Select Bid') },
+    { docId: 'DOC-25', name: 'DLPC Agenda & Proposal (3-Page Checklist Format)', note: 'Select the DLPC meeting', selector: sel('mtg-25', dlpcMeetingOpts, 'Select DLPC Meeting') },
+    { docId: 'DOC-25A', name: 'GeM Agenda Format – DLPC (9-Point Official Table)', note: 'Select the DLPC meeting', selector: sel('mtg-25a', dlpcMeetingOpts, 'Select DLPC Meeting') },
+    { docId: 'DOC-26', name: 'Certificate for reasonability of rate (DLPC & DPC)', note: 'Select the committee meeting', selector: sel('mtg-26', meetingOpts, 'Select Meeting') },
+    { docId: 'DOC-27', name: 'DLPC Minutes of Meeting (MOM)', note: 'Select the DLPC meeting', selector: sel('mtg-27', dlpcMeetingOpts, 'Select DLPC Meeting') },
+    { docId: 'DOC-28', name: 'Checklist B – Final Approval Package', note: 'Select the DLPC meeting', selector: sel('mtg-28', dlpcMeetingOpts, 'Select DLPC Meeting') },
+    { docId: 'DOC-29', name: 'Note – Direct Purchase Against Bid (DLPC)', note: 'Select the DLPC meeting', selector: sel('mtg-29', dlpcMeetingOpts, 'Select DLPC Meeting') },
+    { docId: 'DOC-30', name: 'DPC Proposal Document Index', note: 'Select the DPC meeting', selector: sel('mtg-30', dpcMeetingOpts, 'Select DPC Meeting') },
+    { docId: 'DOC-31', name: 'DPC Forwarding Letter to Directorate', note: 'Select the DPC meeting', selector: sel('mtg-31', dpcMeetingOpts, 'Select DPC Meeting') },
+    { docId: 'DOC-32', name: 'GeM Agenda Format – DPC', note: 'Select the DPC meeting', selector: sel('mtg-32', dpcMeetingOpts, 'Select DPC Meeting') },
+    { docId: 'DOC-33', name: 'Institute BID Certificate', note: 'Select the DPC meeting', selector: sel('mtg-33', dpcMeetingOpts, 'Select DPC Meeting') },
+    { docId: 'DOC-34', name: 'L1 INFO Sheet for DPC', note: 'Select the DPC meeting', selector: sel('mtg-34', dpcMeetingOpts, 'Select DPC Meeting') },
+  ])}
 
     ${phaseCard(6, 'Goods Delivery, Inspection & Bill Passing', '#06B6D4', [
-      { docId:'DOC-36', name:'Department Material Receipt Note', note:'Select the purchase order', selector: sel('ord-36', orderOpts, 'Select Purchase Order') },
-      { docId:'DOC-37', name:'Technical Inspection Report', note:'Select the voucher', selector: sel('vch-37', voucherOpts, 'Select Voucher') },
-      { docId:'DOC-38', name:'Pass for Payment Voucher', note:'Select the voucher', selector: sel('vch-38', voucherOpts, 'Select Voucher') },
-      { docId:'DOC-39', name:'Checklist D & E – Bill Verification', note:'Select the voucher', selector: sel('vch-39', voucherOpts, 'Select Voucher') },
-      { docId:'DOC-40', name:'Procurement Progress Status Report', note:'Financial year', selector: yearSel('yr-40') },
-    ])}
+    { docId: 'DOC-36', name: 'Department Material Receipt Note', note: 'Select the purchase order', selector: sel('ord-36', orderOpts, 'Select Purchase Order') },
+    { docId: 'DOC-37', name: 'Technical Inspection Report', note: 'Select the voucher', selector: sel('vch-37', voucherOpts, 'Select Voucher') },
+    { docId: 'DOC-38', name: 'Pass for Payment Voucher', note: 'Select the voucher', selector: sel('vch-38', voucherOpts, 'Select Voucher') },
+    { docId: 'DOC-39', name: 'Checklist D & E – Bill Verification', note: 'Select the voucher', selector: sel('vch-39', voucherOpts, 'Select Voucher') },
+    { docId: 'DOC-40', name: 'Procurement Progress Status Report', note: 'Financial year', selector: yearSel('yr-40') },
+  ])}
 
     ${phaseCard(7, 'Non-GeM, Services & Equipment Repairs', '#84CC16', [
-      { docId:'DOC-41', name:'Inquiry Letter (Non-GeM Local Purchase)', note:'Select the indent', selector: sel('ind-41', indentOpts, 'Select Indent') },
-      { docId:'DOC-42', name:'Comparative Statement (Govt/Non-Govt Fund)', note:'Generic comparative statement' },
-      { docId:'DOC-43', name:'Purchase Order (Non-GeM / Local)', note:'Select the purchase order', selector: sel('ord-43', orderOpts, 'Select Purchase Order') },
-      { docId:'DOC-44', name:'Repairable Equipment Register', note:'All repairs included automatically' },
-      { docId:'DOC-45', name:'Note for Approval of Repairing', note:'Select the repair request', selector: sel('rep-45', repairOpts, 'Select Repair Request') },
-      { docId:'DOC-46', name:'Work Order (WO – Repairing)', note:'Select the repair request', selector: sel('rep-46', repairOpts, 'Select Repair Request') },
-      { docId:'DOC-47', name:'Pass for Payment (Non-GeM & Repair)', note:'Generic pass for payment (repair)' },
-    ])}
+    { docId: 'DOC-41', name: 'Inquiry Letter (Non-GeM Local Purchase)', note: 'Select the indent', selector: sel('ind-41', indentOpts, 'Select Indent') },
+    { docId: 'DOC-42', name: 'Comparative Statement (Govt/Non-Govt Fund)', note: 'Official rate comparison with 7-member committee', selector: `<select id="fund-42" class="form-control" style="font-size:0.8rem;padding:0.35rem 0.5rem;"><option value="Govt Fund">🏛️ Govt Fund</option><option value="Non-Govt Fund">🏢 Non-Govt Fund</option></select>`, isEditable: true },
+    { docId: 'DOC-43', name: 'Purchase Order & Work Order (Non-GeM / Repairs)', note: 'Generate official Purchase Order or Work Order on letterhead', selector: sel('ord-43', orderOpts, 'Select Purchase Order'), isEditable: true },
+    { docId: 'DOC-44', name: 'Repairable Equipment Register', note: 'All repairs included automatically' },
+    { docId: 'DOC-45', name: 'Note for Approval of Repairing', note: 'Select the repair request', selector: sel('rep-45', repairOpts, 'Select Repair Request'), isEditable: true },
+    { docId: 'DOC-46', name: 'Work Order (WO – Repairing)', note: 'Select the repair request', selector: sel('rep-46', repairOpts, 'Select Repair Request'), isEditable: true },
+    { docId: 'DOC-47', name: 'Pass for Payment (Non-GeM & Repair)', note: 'Certificate to be given along with bills (Non-GeM Purchase & Equipment Repairing)', selector: sel('rep-47', repairOpts, 'Select Repair Request'), isEditable: true },
+  ])}
   `;
 }
 
@@ -6080,15 +9622,15 @@ const DOC_ENTITY_MAP = {
   'DOC-39': () => ({ entityId: document.getElementById('vch-39')?.value }),
   'DOC-40': () => ({ entityId: null, extra: { fin_year: document.getElementById('yr-40')?.value || '2026-27' } }),
   'DOC-41': () => ({ entityId: document.getElementById('ind-41')?.value }),
-  'DOC-42': () => ({ entityId: null, extra: {} }),
+  'DOC-42': () => ({ entityId: null, extra: { fund_type: document.getElementById('fund-42')?.value || 'Govt Fund' } }),
   'DOC-43': () => ({ entityId: document.getElementById('ord-43')?.value }),
   'DOC-44': () => ({ entityId: null, extra: {} }),
   'DOC-45': () => ({ entityId: document.getElementById('rep-45')?.value }),
   'DOC-46': () => ({ entityId: document.getElementById('rep-46')?.value }),
-  'DOC-47': () => ({ entityId: null, extra: {} }),
+  'DOC-47': () => ({ entityId: document.getElementById('rep-47')?.value, extra: {} }),
 };
 
-window.downloadDocFromCentre = async function(docId, format = null) {
+window.downloadDocFromCentre = async function (docId, format = null) {
   const btn = document.querySelector(`[data-doc="${docId}"]${format ? `[data-format="${format}"]` : ''}`) || document.querySelector(`[data-doc="${docId}"]`);
   const statusEl = document.getElementById(`status-${docId}`);
   if (!DOC_ENTITY_MAP[docId]) return;
@@ -6127,14 +9669,14 @@ window.downloadDocFromCentre = async function(docId, format = null) {
   }
 };
 
-window.openDocEditor = function(docId) {
+window.openDocEditor = function (docId) {
   if (['DOC-25', 'DOC-25A', 'DOC-26', 'DOC-27', 'DOC-28', 'DOC-29', 'DOC-30', 'DOC-31', 'DOC-32', 'DOC-33', 'DOC-34'].includes(docId)) {
     let selectEl = null;
     if (docId === 'DOC-25') selectEl = document.getElementById('mtg-25');
     else if (docId === 'DOC-25A') selectEl = document.getElementById('mtg-25a');
     else if (docId === 'DOC-32') selectEl = document.getElementById('mtg-32');
-    else selectEl = document.getElementById(`mtg-${docId.replace('DOC-','').toLowerCase()}`);
-    
+    else selectEl = document.getElementById(`mtg-${docId.replace('DOC-', '').toLowerCase()}`);
+
     const meetingId = selectEl?.value || '';
     window._targetMeetingId = meetingId;
     window._targetDocId = docId;
@@ -6151,8 +9693,36 @@ window.openDocEditor = function(docId) {
     window.location.hash = '#/financial';
   } else if (['DOC-36', 'DOC-37', 'DOC-38', 'DOC-39'].includes(docId)) {
     window.location.hash = '#/delivery';
-  } else if (['DOC-41', 'DOC-43', 'DOC-45', 'DOC-46'].includes(docId)) {
-    window.location.hash = '#/repairs';
+  } else if (docId === 'DOC-42') {
+    window._targetRepairsTab = 'comp';
+    window.location.hash = '#/repairs?tab=comp';
+  } else if (docId === 'DOC-43') {
+    window._targetRepairsTab = 'doc43';
+    window.location.hash = '#/repairs?tab=doc43';
+  } else if (docId === 'DOC-45') {
+    const selectEl = document.getElementById('rep-45');
+    const repairId = selectEl?.value || '';
+    window._selectedRepairForDoc45 = repairId;
+    window._targetRepairsTab = 'doc45';
+    window.location.hash = `#/repairs?tab=doc45${repairId ? `&repairId=${repairId}` : ''}`;
+  } else if (docId === 'DOC-46') {
+    const selectEl = document.getElementById('rep-46');
+    const repairId = selectEl?.value || '';
+    window._selectedRepairForDoc46 = repairId;
+    window._targetRepairsTab = 'doc46';
+    window.location.hash = `#/repairs?tab=doc46${repairId ? `&repairId=${repairId}` : ''}`;
+  } else if (docId === 'DOC-47') {
+    const selectEl = document.getElementById('rep-47');
+    const repairId = selectEl?.value || '';
+    window._selectedRepairForDoc47 = repairId;
+    window._targetRepairsTab = 'doc47';
+    window.location.hash = `#/repairs?tab=doc47${repairId ? `&repairId=${repairId}` : ''}`;
+  } else if (docId === 'DOC-41') {
+    const selectEl = document.getElementById('ind-41');
+    const indentId = selectEl?.value || '';
+    if (indentId) window._selectedRepairForInquiry = indentId;
+    window._targetRepairsTab = 'inquiry';
+    window.location.hash = '#/repairs?tab=inquiry';
   }
 };
 
