@@ -14,8 +14,8 @@ const { DOCCTEStatements, DOCITSummary, DOCCTESummary } = require('./generators/
 const DOCCommitteeOrders = require('./generators/DOC-08-11-Committee');
 const { DOCIndentNonGovt, DOCSpecificationSheet, DOCATC, DOCGeMGuidelines, DOCNoteOtherItems, DOCChecklistA, DOCChecklistC } = require('./generators/DOC-13-20-Indent');
 const { DOCEMDRefund, DOCSecurityDepositNote } = require('./generators/DOC-21-22-EMD');
-const { DOCScrutinyReport, DOCDisqualificationSheet, DOCDLPCAgenda, DOCRateReasonability, DOCDLPCMOM, DOCChecklistB, DOCDirectPurchaseNote } = require('./generators/DOC-23-29-DLPC');
-const { DOCDPCIndex, DOCDPCForwardingLetter, DOCDPCAgenda, DOCInstituteBIDCertificate, DOCL1InfoSheet, DOCDPCMOM } = require('./generators/DOC-30-35-DPC');
+const { DOCScrutinyReport, DOCDisqualificationSheet, DOCDLPCAgenda, DOCGeMDLPCAgenda, DOCRateReasonability, DOCDLPCMOM, DOCChecklistB, DOCDirectPurchaseNote } = require('./generators/DOC-23-29-DLPC');
+const { DOCDPCIndex, DOCDPCForwardingLetter, DOCDPCAgenda, DOCInstituteBIDCertificate, DOCL1InfoSheet } = require('./generators/DOC-30-35-DPC');
 const { DOCReceiptNote, DOCInspectionReport, DOCPassForPayment, DOCChecklistDE, DOCProcurementStatus } = require('./generators/DOC-36-40-Delivery');
 const { DOCInquiryLetter, DOCComparativeStatement, DOCPurchaseOrderNonGeM, DOCRepairableEquipment, DOCRepairApprovalNote, DOCWorkOrder, DOCPassForPaymentRepair } = require('./generators/DOC-41-47-Services');
 const { generateGujaratiNoteSheetDocx } = require('./docxGenerator');
@@ -81,9 +81,8 @@ async function fetchFinancialInstrument(id) {
   // Try to get item name from bid
   const bidRes = await db.query(`
     SELECT b.*, i.item_name FROM bids b
-    LEFT JOIN indents i ON b.indent_id = i.id
     WHERE b.bid_no = $1`, [fi.bid_order_no]);
-  fi.item_name = bidRes.rows[0]?.item_name || '';
+  fi.item_name = fi.item_service_name || bidRes.rows[0]?.item_name || '';
   return fi;
 }
 
@@ -102,8 +101,8 @@ async function fetchBidWithScrutiny(bid_id) {
 
 async function fetchMeeting(meeting_id) {
   const res = await db.query(`
-    SELECT m.*, i.item_name, i.total_cost as est_cost, i.budget_head, d.name as dept_name,
-           b.bid_no, b.bid_publish_date, b.bid_end_date
+    SELECT m.*, i.item_name, i.total_cost as est_cost, i.budget_head, i.quantity as indent_qty, d.name as dept_name,
+           b.bid_no, b.bid_publish_date, b.bid_end_date, b.bid_opening_date, b.scrutiny_params
     FROM committee_meetings m
     LEFT JOIN indents i ON m.indent_id = i.id
     LEFT JOIN departments d ON i.dept_id = d.id
@@ -111,6 +110,7 @@ async function fetchMeeting(meeting_id) {
     WHERE m.id = $1`, [meeting_id]);
   const meeting = res.rows[0];
   if (!meeting) return null;
+
   // Fetch attendees
   if (meeting.attendee_ids && meeting.attendee_ids.length > 0) {
     const attRes = await db.query(
@@ -121,6 +121,32 @@ async function fetchMeeting(meeting_id) {
   } else {
     meeting.attendees = [];
   }
+
+  // Fetch bidders if bid_id is associated
+  if (meeting.bid_id) {
+    const scrRes = await db.query('SELECT * FROM scrutiny_details WHERE bid_id = $1 ORDER BY id ASC', [meeting.bid_id]);
+    meeting.bidders = scrRes.rows;
+    meeting.total_bidders = scrRes.rows.length;
+    meeting.qualified_bidders = scrRes.rows.filter(b => b.final_tech_status === 'Qualified').length;
+    meeting.disqualified_bidders = scrRes.rows.filter(b => b.final_tech_status === 'Disqualified').length;
+    
+    // Auto-resolve L1 bidder address
+    const l1Bidder = scrRes.rows.find(b => b.bidder_name && meeting.l1_vendor && b.bidder_name.toLowerCase().includes(meeting.l1_vendor.toLowerCase().replace(/^m\/s\s*/i, '')));
+    if (l1Bidder && l1Bidder.bidder_address) {
+      meeting.vendor_address = l1Bidder.bidder_address;
+    }
+  } else {
+    meeting.bidders = [];
+  }
+
+  // Check purchase_orders for additional vendor metadata
+  try {
+    const poRes = await db.query('SELECT * FROM purchase_orders WHERE meeting_id = $1 OR indent_id = $2 LIMIT 1', [meeting_id, meeting.indent_id]);
+    if (poRes.rows[0]?.supplier_address && !meeting.vendor_address) {
+      meeting.vendor_address = poRes.rows[0].supplier_address;
+    }
+  } catch (_) {}
+
   return meeting;
 }
 
@@ -201,32 +227,52 @@ class DocumentGenerator {
       // ── Phase 2: CTE Statements ─────────────────────────────────────────
       case 'DOC-01': {
         const items = await fetchCTEData(extra.fin_year, 'Non-IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-01', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-01', { fin_year: extra.fin_year, items });
       }
       case 'DOC-02': {
         const items = await fetchCTEData(extra.fin_year, 'IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-02', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-02', { fin_year: extra.fin_year, items });
       }
       case 'DOC-03': {
         const items = await fetchCTEData(extra.fin_year, 'Furniture');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-03', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-03', { fin_year: extra.fin_year, items });
       }
       case 'DOC-04': {
         const items = await fetchCTEData(extra.fin_year, 'Books');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-04', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-04', { fin_year: extra.fin_year, items });
       }
       case 'DOC-05': {
         const items = await fetchCTEData(extra.fin_year, 'Maintenance');
+        if (extra.format === 'xlsx') {
+          return DOCCTEStatements.generateExcel('DOC-05', { fin_year: extra.fin_year, items });
+        }
         return DOCCTEStatements.generate('DOC-05', { fin_year: extra.fin_year, items });
       }
       case 'DOC-06': {
         const items = await fetchCTEData(extra.fin_year, 'IT Equipment');
+        if (extra.format === 'xlsx') {
+          return DOCITSummary.generateExcel({ fin_year: extra.fin_year, items });
+        }
         return DOCITSummary.generate({ fin_year: extra.fin_year, items });
       }
       case 'DOC-07': {
-        const catRes = await db.query(`SELECT category, COUNT(*) as item_count, SUM(total_cost) as total_amount FROM cte_demands ${extra.fin_year ? "WHERE fin_year = $1" : ""} GROUP BY category`, extra.fin_year ? [extra.fin_year] : []);
-        const grantRes = await db.query(`SELECT grant_head, COUNT(*) as item_count, SUM(total_cost) as total_amount FROM cte_demands ${extra.fin_year ? "WHERE fin_year = $1" : ""} GROUP BY grant_head`, extra.fin_year ? [extra.fin_year] : []);
-        return DOCCTESummary.generate({ fin_year: extra.fin_year, byCategory: catRes.rows, byGrant: grantRes.rows });
+        const items = await fetchCTEData(extra.fin_year, null);
+        if (extra.format === 'xlsx') {
+          return DOCCTESummary.generateExcel({ fin_year: extra.fin_year, items });
+        }
+        return DOCCTESummary.generate({ fin_year: extra.fin_year, items });
       }
 
       // ── Phase 1: Committee Orders ───────────────────────────────────────
@@ -310,6 +356,10 @@ class DocumentGenerator {
         const meeting = await fetchMeeting(id);
         return DOCDLPCAgenda.generate(meeting || {});
       }
+      case 'DOC-25A': {
+        const meeting = await fetchMeeting(id);
+        return DOCGeMDLPCAgenda.generate(meeting || {});
+      }
       case 'DOC-26': {
         const meeting = await fetchMeeting(id);
         return DOCRateReasonability.generate({ ...meeting, committee_type: meeting?.committee_type || 'DLPC', ...extra });
@@ -346,36 +396,62 @@ class DocumentGenerator {
       }
       case 'DOC-34': {
         const meeting = await fetchMeeting(id);
-        // Get order for vendor details
         const orderRes = await db.query('SELECT * FROM purchase_orders WHERE meeting_id = $1 LIMIT 1', [id]);
         const order = orderRes.rows[0] || {};
+        if (extra.format === 'xlsx') {
+          return DOCL1InfoSheet.generateExcel({ ...meeting, vendor_address: order.supplier_address, ...extra });
+        }
         return DOCL1InfoSheet.generate({ ...meeting, vendor_address: order.supplier_address, ...extra });
       }
-      case 'DOC-35': {
-        const meeting = await fetchMeeting(id);
-        return DOCDPCMOM.generate(meeting || {});
-      }
-
       // ── Phase 6: Delivery, Inspection, Payment ─────────────────────────
       case 'DOC-36': {
         const order = await fetchOrder(id);
-        if (order) {
-          // Add items from indent
-          order.items = [{ item_name: order.item_name, qty_ordered: 1, qty_received: 1 }];
-        }
-        return DOCReceiptNote.generate(order || {});
+        const data = {
+          ...order,
+          ...extra,
+        };
+        const qty = data.qty || data.indent_qty || 1;
+        const total = data.total_value || data.total_cost || 0;
+        const unit = data.unit_price || (qty > 0 ? (total / qty) : total);
+        data.qty = qty;
+        data.total_price = data.total_price || total;
+        data.unit_price = data.unit_price || unit;
+        return DOCReceiptNote.generate(data);
       }
       case 'DOC-37': {
-        const insp = await fetchInspection(id);
-        return DOCInspectionReport.generate(insp || {});
+        let insp = null;
+        if (id) {
+          insp = await fetchInspection(id);
+          if (!insp) {
+            const ord = await fetchOrder(id);
+            insp = ord || {};
+          }
+        }
+        return DOCInspectionReport.generate({ ...(insp || {}), ...extra });
       }
       case 'DOC-38': {
-        const voucher = await fetchVoucher(id);
-        return DOCPassForPayment.generate(voucher || {});
+        let vData = await fetchVoucher(id);
+        if (!vData) {
+          const ord = await fetchOrder(id);
+          if (ord) vData = ord;
+          else {
+            const insp = await fetchInspection(id);
+            if (insp) vData = insp;
+          }
+        }
+        return DOCPassForPayment.generate({ ...(vData || {}), ...extra });
       }
       case 'DOC-39': {
-        const voucher = await fetchVoucher(id);
-        return DOCChecklistDE.generate(voucher || {});
+        let vData = await fetchVoucher(id);
+        if (!vData) {
+          const ord = await fetchOrder(id);
+          if (ord) vData = ord;
+          else {
+            const insp = await fetchInspection(id);
+            if (insp) vData = insp;
+          }
+        }
+        return DOCChecklistDE.generate({ ...(vData || {}), ...extra });
       }
       case 'DOC-40': {
         const fin_year = extra.fin_year;

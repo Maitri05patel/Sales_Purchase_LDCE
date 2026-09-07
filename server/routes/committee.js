@@ -23,7 +23,7 @@ router.get('/meetings', authorize('StoreOfficer', 'Principal', 'DLPCMember', 'Ac
 router.post('/meetings', authorize('StoreOfficer', 'DLPCMember'), async (req, res) => {
   const {
     committee_type, meeting_ref, meeting_date, indent_id, bid_id,
-    l1_vendor, l1_amount, rate_reasonability, recommendation, attendee_ids, chk_b_verified
+    l1_vendor, l1_amount, rate_reasonability, recommendation, attendee_ids, chk_b_verified, agenda_data
   } = req.body;
 
   if (!committee_type || !meeting_ref || !l1_vendor || !l1_amount) {
@@ -34,12 +34,13 @@ router.post('/meetings', authorize('StoreOfficer', 'DLPCMember'), async (req, re
     const result = await db.executeTransaction(async (client) => {
       const resMeet = await client.query(
         `INSERT INTO committee_meetings 
-        (committee_type, meeting_ref, meeting_date, indent_id, bid_id, l1_vendor, l1_amount, rate_reasonability, recommendation, attendee_ids, chk_b_verified, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Sanctioned')
+        (committee_type, meeting_ref, meeting_date, indent_id, bid_id, l1_vendor, l1_amount, rate_reasonability, recommendation, attendee_ids, chk_b_verified, agenda_data, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Sanctioned')
         RETURNING *`,
         [
           committee_type, meeting_ref, meeting_date || new Date(), indent_id || null, bid_id || null,
-          l1_vendor, l1_amount, rate_reasonability || '', recommendation || '', attendee_ids || [], chk_b_verified ?? true
+          l1_vendor, l1_amount, rate_reasonability || '', recommendation || '', attendee_ids || [], chk_b_verified ?? true,
+          agenda_data ? JSON.stringify(agenda_data) : null
         ]
       );
 
@@ -59,6 +60,20 @@ router.post('/meetings', authorize('StoreOfficer', 'DLPCMember'), async (req, re
     });
 
     res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update Agenda Data for a Committee Meeting
+router.put('/meetings/:id/agenda', async (req, res) => {
+  const { agenda_data } = req.body;
+  try {
+    const result = await db.query(
+      `UPDATE committee_meetings SET agenda_data = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+      [JSON.stringify(agenda_data || {}), req.params.id]
+    );
+    res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

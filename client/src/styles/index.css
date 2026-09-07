@@ -682,6 +682,21 @@ textarea.form-control {
   color: var(--red-600);
 }
 
+.badge-purple {
+  background: var(--purple-100);
+  color: var(--purple-600);
+}
+
+.badge-secondary {
+  background: var(--neutral-100);
+  color: var(--neutral-700);
+}
+
+.badge-primary {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
 /* ============================================================
    COMPONENTS: Gujarati Note Sheet Canvas
    ============================================================ */
